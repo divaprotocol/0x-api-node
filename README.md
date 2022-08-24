@@ -66,12 +66,43 @@ The transaction watcher ensures that the data being served is present and up-to-
 -   [Node.js](https://nodejs.org/en/download/) > v16.x
 -   [Yarn](https://yarnpkg.com/en/) > v1.x
 -   [Docker](https://www.docker.com/products/docker-desktop) > 19.x
+-   Running [Kafka Service](https://hevodata.com/blog/how-to-install-kafka-on-ubuntu/)
+-   Running [Order Watcher Service](https://github.com/divaprotocol/0x-rs)
+
+#### Service execution order
+
+1. Running Kafka service
+    ```
+    sudo systemctl start kafka.service
+    ```
+
+2. Running Docker service
+    ```
+    cd 0x-api-fork && docker-compose up --build
+    ```
+
+3. Running Block watcher service
+    ```
+    cd 0x-rs && cd block-watcher && cargo run
+    ```
+
+4. Running Order watcher service
+    ```
+    cd 0x-rs && cd order-watcher && cargo Run
+    ```
+
+5. Running Node service
+    ```
+    cd 0x-api-fork && yarn dev
+    ```
 
 #### Developing
 
 To get a local development version of `0x-api` running:
 
 1. Clone the repo.
+
+2. Create an `.env` file and copy the content from the `.env_example` file. Defaults are defined in `config.ts`/`config.js`. The bash environment takes precedence over the `.env` file. If you run `source .env`, changes to the `.env` file will have no effect until you unset the colliding variables. Sample variables of the `.env` file are in the `.env.example` file.
 
 2. Create an `.env` file and copy the content from the `.env_example` file. Defaults are defined in `config.ts`/`config.js`. The bash environment takes precedence over the `.env` file. If you run `source .env`, changes to the `.env` file will have no effect until you unset the colliding variables.
 
