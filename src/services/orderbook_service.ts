@@ -3,6 +3,7 @@ import * as _ from 'lodash';
 import { Connection, In, MoreThanOrEqual } from 'typeorm';
 
 import { LimitOrder } from '../asset-swapper';
+import { fetchPoolLists } from '../asset-swapper/utils/market_operation_utils/pools_cache/pool_list_cache';
 import {
     DB_ORDERS_UPDATE_CHUNK_SIZE,
     MAX_ORDER_EXPIRATION_BUFFER_SECONDS,
