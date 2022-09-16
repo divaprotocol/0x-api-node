@@ -100,6 +100,21 @@ export interface OrderbookResponse {
     asks: PaginatedCollection<SRAOrder>;
 }
 
+export interface OrderbookPriceRequest {
+    page: number;
+    perPage: number;
+    graphUrl: string;
+    createdBy: string;
+    maker: string;
+    taker: string;
+    feeRecipient: string;
+    makerAmount: number;
+    takerAmount: number;
+    takerTokenFeeAmount: number;
+    threshold: number;
+    best: number;
+}
+
 export interface OrderConfigRequestPayload {
     maker: string;
     taker: string;

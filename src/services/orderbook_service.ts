@@ -10,7 +10,7 @@ import {
     SRA_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_PERSISTENT_ORDER_POSTING_WHITELISTED_API_KEYS,
 } from '../config';
-import { ONE_SECOND_MS } from '../constants';
+import { ONE_SECOND_MS, NULL_ADDRESS } from '../constants';
 import { PersistentSignedOrderV4Entity, SignedOrderV4Entity } from '../entities';
 import { ExpiredOrderError, ValidationError, ValidationErrorCodes, ValidationErrorReasons } from '../errors';
 import { logger } from '../logger';
