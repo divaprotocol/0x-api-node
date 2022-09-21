@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+
+// Source: https://github.com/0xProject/protocol/blob/24397c51a8c7bf704948c8fc6874843bccd5d244/packages/asset-swapper/contracts/src/BalanceChecker.sol#L69-L92
+
 /*
 
   Copyright 2020 ZeroEx Intl.
