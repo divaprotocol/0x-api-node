@@ -1,16 +1,24 @@
 import { LimitOrderFields } from '@0x/protocol-utils';
+// import { BigNumber } from '@0x/utils';
 import * as _ from 'lodash';
 import { Connection, In, MoreThanOrEqual } from 'typeorm';
 
-import { LimitOrder } from '../asset-swapper';
+import { LimitOrder, BalanceCheckerContract } from '../asset-swapper';
 import { fetchPoolLists } from '../asset-swapper/utils/market_operation_utils/pools_cache/pool_list_cache';
 import {
     DB_ORDERS_UPDATE_CHUNK_SIZE,
     MAX_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_PERSISTENT_ORDER_POSTING_WHITELISTED_API_KEYS,
+    // defaultHttpServiceConfig
 } from '../config';
-import { ONE_SECOND_MS, NULL_ADDRESS } from '../constants';
+import {
+    ONE_SECOND_MS,
+    NULL_ADDRESS,
+    // BALANCE_CHECKER_ADDRESS,
+    // BALANCE_CHECKER_GAS_LIMIT,
+    DIVA_GOVERNANCE_ADDRESS
+} from '../constants';
 import { PersistentSignedOrderV4Entity, SignedOrderV4Entity } from '../entities';
 import { ExpiredOrderError, ValidationError, ValidationErrorCodes, ValidationErrorReasons } from '../errors';
 import { logger } from '../logger';
@@ -25,6 +33,7 @@ import {
 import { orderUtils } from '../utils/order_utils';
 import { OrderWatcher, OrderWatcherInterface } from '../utils/order_watcher';
 import { paginationUtils } from '../utils/pagination_utils';
+// import { providerUtils } from '../utils/provider_utils';
 
 export class OrderBookService implements IOrderBookService {
     private readonly _connection: Connection;
