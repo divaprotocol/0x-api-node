@@ -1,5 +1,4 @@
 import { LimitOrderFields } from '@0x/protocol-utils';
-const Web3 = require('web3');
 import * as _ from 'lodash';
 import { Connection, In, MoreThanOrEqual } from 'typeorm';
 
@@ -10,10 +9,7 @@ import {
     MAX_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_PERSISTENT_ORDER_POSTING_WHITELISTED_API_KEYS,
-    ETHEREUM_RPC_URL,
-    BALANCE_CHECKER_CONTRACT
 } from '../config';
-import { artifacts } from '../artifacts';
 import { ONE_SECOND_MS, NULL_ADDRESS } from '../constants';
 import { PersistentSignedOrderV4Entity, SignedOrderV4Entity } from '../entities';
 import { ExpiredOrderError, ValidationError, ValidationErrorCodes, ValidationErrorReasons } from '../errors';
