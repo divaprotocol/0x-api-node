@@ -1,5 +1,6 @@
 import { LimitOrderFields } from '@0x/protocol-utils';
-// import { BigNumber } from '@0x/utils';
+import { BigNumber } from '@0x/utils';
+import { getAddress } from '@ethersproject/address';
 import * as _ from 'lodash';
 import { Connection, In, MoreThanOrEqual } from 'typeorm';
 
@@ -10,13 +11,13 @@ import {
     MAX_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_PERSISTENT_ORDER_POSTING_WHITELISTED_API_KEYS,
-    // defaultHttpServiceConfig
+    defaultHttpServiceConfig
 } from '../config';
 import {
     ONE_SECOND_MS,
     NULL_ADDRESS,
-    // BALANCE_CHECKER_ADDRESS,
-    // BALANCE_CHECKER_GAS_LIMIT,
+    BALANCE_CHECKER_ADDRESS,
+    BALANCE_CHECKER_GAS_LIMIT,
     DIVA_GOVERNANCE_ADDRESS
 } from '../constants';
 import { PersistentSignedOrderV4Entity, SignedOrderV4Entity } from '../entities';
@@ -33,7 +34,7 @@ import {
 import { orderUtils } from '../utils/order_utils';
 import { OrderWatcher, OrderWatcherInterface } from '../utils/order_watcher';
 import { paginationUtils } from '../utils/pagination_utils';
-// import { providerUtils } from '../utils/provider_utils';
+import { providerUtils } from '../utils/provider_utils';
 
 export class OrderBookService implements IOrderBookService {
     private readonly _connection: Connection;
