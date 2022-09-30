@@ -20,6 +20,7 @@ import {
     BALANCE_CHECKER_ADDRESS,
     BALANCE_CHECKER_GAS_LIMIT,
     EXCHANGE_PROXY_ADDRESS,
+    ARRAY_LIMIT_LENGTH,
 } from '../constants';
 import { PersistentSignedOrderV4Entity, SignedOrderV4Entity } from '../entities';
 import { ExpiredOrderError, ValidationError, ValidationErrorCodes, ValidationErrorReasons } from '../errors';
