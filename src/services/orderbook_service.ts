@@ -294,7 +294,7 @@ export class OrderBookService {
             createdBy: "",
             taker: NULL_ADDRESS,
             feeRecipient: NULL_ADDRESS,
-            takerTokenFee: 0,
+            takerTokenFee: -1,
             threshold: 0,
         }
         const resultBids: SRAOrder[] = [];
