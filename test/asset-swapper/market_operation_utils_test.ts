@@ -10,6 +10,7 @@ import {
 import { FillQuoteTransformerOrderType, LimitOrder, RfqOrder, SignatureType } from '@0x/protocol-utils';
 import { BigNumber, hexUtils, NULL_BYTES } from '@0x/utils';
 import { Pool } from 'balancer-labs-sor-v1/dist/types';
+import { BigNumber as BigLabNumber } from 'balancer-labs-sor-v1/dist/utils/bignumber';
 import * as _ from 'lodash';
 import * as TypeMoq from 'typemoq';
 

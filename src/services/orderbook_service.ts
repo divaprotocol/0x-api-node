@@ -5,27 +5,25 @@ import * as _ from 'lodash';
 import { Connection, In, MoreThanOrEqual } from 'typeorm';
 import * as WebSocket from 'ws';
 
-import { LimitOrder, BalanceCheckerContract } from '../asset-swapper';
+import { BalanceCheckerContract, LimitOrder } from '../asset-swapper';
 import { fetchPoolLists } from '../asset-swapper/utils/market_operation_utils/pools_cache/pool_list_cache';
 import {
     DB_ORDERS_UPDATE_CHUNK_SIZE,
     MAX_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_PERSISTENT_ORDER_POSTING_WHITELISTED_API_KEYS,
-    defaultHttpServiceConfig,
     WEBSOCKET_PORT,
 } from '../config';
 import {
-    ONE_SECOND_MS,
-    NULL_ADDRESS,
-    DIVA_GOVERNANCE_ADDRESS,
+    ARRAY_LIMIT_LENGTH,
     BALANCE_CHECKER_ADDRESS,
     BALANCE_CHECKER_GAS_LIMIT,
-    EXCHANGE_PROXY_ADDRESS,
-    ARRAY_LIMIT_LENGTH,
     DEFAULT_PAGE,
     DEFAULT_PER_PAGE,
-
+    DIVA_GOVERNANCE_ADDRESS,
+    EXCHANGE_PROXY_ADDRESS,
+    NULL_ADDRESS,
+    ONE_SECOND_MS,
 } from '../constants';
 import { PersistentSignedOrderV4Entity, SignedOrderV4Entity } from '../entities';
 import { ExpiredOrderError, ValidationError, ValidationErrorCodes, ValidationErrorReasons } from '../errors';
@@ -259,7 +257,7 @@ export class OrderBookService implements IOrderBookService {
                     signedOrder.takerToken,
                     signedOrder.makerToken
                 )
-            )
+            );
         }));
 
         wss.clients.forEach((client) => {
@@ -277,7 +275,7 @@ export class OrderBookService implements IOrderBookService {
                     signedOrder.takerToken,
                     signedOrder.makerToken
                 )
-            )
+            );
         }));
 
         wss.clients.forEach((client) => {
