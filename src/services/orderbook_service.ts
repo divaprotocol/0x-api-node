@@ -235,6 +235,7 @@ export class OrderBookService implements IOrderBookService {
     }
     public async addOrderAsync(signedOrder: SignedLimitOrder): Promise<void> {
         await this._orderWatcher.postOrdersAsync([signedOrder]);
+        // After creating this order, we get the updated bid and ask information for the pool.
         const result = await this.getOrderBookAsync(
             DEFAULT_PAGE,
             DEFAULT_PER_PAGE,
@@ -242,12 +243,14 @@ export class OrderBookService implements IOrderBookService {
             signedOrder.makerToken
         );
 
+        // Send the data using websocket to every clients
         wss.clients.forEach((client) => {
             client.send(JSON.stringify([result]));
         });
     }
     public async addOrdersAsync(signedOrders: SignedLimitOrder[]): Promise<void> {
         await this._orderWatcher.postOrdersAsync(signedOrders);
+        // After creating these orders, we get the updated bid and ask information for the pool.
         const result: OrderbookResponse[] = [];
         await Promise.all(signedOrders.map(async (signedOrder) => {
             result.push(
@@ -260,12 +263,14 @@ export class OrderBookService implements IOrderBookService {
             );
         }));
 
+        // Send the data using websocket to every clients
         wss.clients.forEach((client) => {
             client.send(JSON.stringify(result));
         });
     }
     public async addPersistentOrdersAsync(signedOrders: SignedLimitOrder[]): Promise<void> {
         await this._orderWatcher.postOrdersAsync(signedOrders);
+        // After creating these orders, we get the updated bid and ask information for the pool.
         const result: OrderbookResponse[] = [];
         await Promise.all(signedOrders.map(async (signedOrder) => {
             result.push(
@@ -278,6 +283,7 @@ export class OrderBookService implements IOrderBookService {
             );
         }));
 
+        // Send the data using websocket to every clients
         wss.clients.forEach((client) => {
             client.send(JSON.stringify(result));
         });
