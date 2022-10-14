@@ -257,7 +257,7 @@ export class OrderBookService implements IOrderBookService {
 
         // Send the data using websocket to every clients
         wss.clients.forEach((client) => {
-            client.send(JSON.stringify([result]));
+            client.send(JSON.stringify(result));
         });
     }
 
