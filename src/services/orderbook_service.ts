@@ -238,25 +238,22 @@ export class OrderBookService implements IOrderBookService {
         await this._orderWatcher.postOrdersAsync([signedOrder]);
         // After creating this order, we get the updated bid and ask information for the pool.
         const result: any[] = [];
-        result.push(signedOrder.poolId);
-
-        result.push(
-            await this.getOrderBookAsync(
+        result.push({
+            poolId: signedOrder.poolId,
+            isBuy: signedOrder.isBuy,
+            first: await this.getOrderBookAsync(
                 DEFAULT_PAGE,
                 DEFAULT_PER_PAGE,
                 signedOrder.makerToken,
                 signedOrder.takerToken,
-            )
-        );
-
-        result.push(
-            await this.getOrderBookAsync(
+            ),
+            second: await this.getOrderBookAsync(
                 DEFAULT_PAGE,
                 DEFAULT_PER_PAGE,
                 signedOrder.takerToken,
                 signedOrder.makerToken,
-            )
-        );
+            ),
+        });
 
         // Send the data using websocket to every clients
         wss.clients.forEach((client) => {
@@ -272,22 +269,22 @@ export class OrderBookService implements IOrderBookService {
             const isExists = result.filter((item) => item[0] === signedOrder.poolId);
 
             if (isExists.length === 0) {
-                result.push(
-                    [
-                        await this.getOrderBookAsync(
-                            DEFAULT_PAGE,
-                            DEFAULT_PER_PAGE,
-                            signedOrder.makerToken,
-                            signedOrder.takerToken,
-                        ),
-                        await this.getOrderBookAsync(
-                            DEFAULT_PAGE,
-                            DEFAULT_PER_PAGE,
-                            signedOrder.takerToken,
-                            signedOrder.makerToken
-                        ),
-                    ]
-                );
+                result.push({
+                    poolId: signedOrder.poolId,
+                    isBuy: signedOrder.isBuy,
+                    first: await this.getOrderBookAsync(
+                        DEFAULT_PAGE,
+                        DEFAULT_PER_PAGE,
+                        signedOrder.makerToken,
+                        signedOrder.takerToken,
+                    ),
+                    second: await this.getOrderBookAsync(
+                        DEFAULT_PAGE,
+                        DEFAULT_PER_PAGE,
+                        signedOrder.takerToken,
+                        signedOrder.makerToken,
+                    ),
+                });
             }
         }));
 
@@ -305,22 +302,22 @@ export class OrderBookService implements IOrderBookService {
             const isExists = result.filter((item) => item[0] === signedOrder.poolId);
 
             if (isExists.length === 0) {
-                result.push(
-                    [
-                        await this.getOrderBookAsync(
-                            DEFAULT_PAGE,
-                            DEFAULT_PER_PAGE,
-                            signedOrder.makerToken,
-                            signedOrder.takerToken,
-                        ),
-                        await this.getOrderBookAsync(
-                            DEFAULT_PAGE,
-                            DEFAULT_PER_PAGE,
-                            signedOrder.takerToken,
-                            signedOrder.makerToken
-                        ),
-                    ]
-                );
+                result.push({
+                    poolId: signedOrder.poolId,
+                    isBuy: signedOrder.isBuy,
+                    first: await this.getOrderBookAsync(
+                        DEFAULT_PAGE,
+                        DEFAULT_PER_PAGE,
+                        signedOrder.makerToken,
+                        signedOrder.takerToken,
+                    ),
+                    second: await this.getOrderBookAsync(
+                        DEFAULT_PAGE,
+                        DEFAULT_PER_PAGE,
+                        signedOrder.takerToken,
+                        signedOrder.makerToken,
+                    ),
+                });
             }
         }));
 
