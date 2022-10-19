@@ -7,3 +7,5 @@ export { RfqMakerPairs } from './RfqMakerPairs';
 export { RfqMakerPairsUpdateTimeHash } from './RfqMakerPairsUpdateTimeHash';
 export { SignedOrderV4Entity } from './SignedOrderV4Entity';
 export { OrderWatcherSignedOrderEntity } from './OrderWatcherSignedOrderEntity';
+export { SignedOfferEntity } from './SignedOfferEntity';
+export { AddSignedOfferLiquidityEntity } from './AddSignedOfferLiquidityEntity';

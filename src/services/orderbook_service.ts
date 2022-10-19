@@ -33,6 +33,7 @@ import {
     OrderbookResponse,
     OrderEventEndState,
     PaginatedCollection,
+    SignedLimitOffer,
     SignedLimitOrder,
     SRAOrder,
 } from '../types';
@@ -60,6 +61,8 @@ export class OrderBookService implements IOrderBookService {
     public isAllowedPersistentOrders(apiKey: string): boolean {
         return SRA_PERSISTENT_ORDER_POSTING_WHITELISTED_API_KEYS.includes(apiKey);
     }
+
+    // tslint:disable-next-line:prefer-function-over-method
     public async getOrderByHashIfExistsAsync(orderHash: string): Promise<SRAOrder | undefined> {
         let signedOrderEntity;
         signedOrderEntity = await this._connection.manager.findOne(SignedOrderV4Entity, orderHash);
@@ -212,6 +215,7 @@ export class OrderBookService implements IOrderBookService {
         return paginatedApiOrders;
     }
 
+    // tslint:disable-next-line:prefer-function-over-method
     public async getBatchOrdersAsync(
         page: number,
         perPage: number,
@@ -260,6 +264,7 @@ export class OrderBookService implements IOrderBookService {
         });
     }
 
+    // tslint:disable-next-line:prefer-function-over-method
     public async addOrdersAsync(signedOrders: SignedLimitOrder[]): Promise<void> {
         await this._orderWatcher.postOrdersAsync(signedOrders);
         // After creating these orders, we get the updated bid and ask information for the pool.
@@ -292,6 +297,7 @@ export class OrderBookService implements IOrderBookService {
         });
     }
 
+    // tslint:disable-next-line:prefer-function-over-method
     public async addPersistentOrdersAsync(signedOrders: SignedLimitOrder[]): Promise<void> {
         await this._orderWatcher.postOrdersAsync(signedOrders);
         // After creating these orders, we get the updated bid and ask information for the pool.
@@ -339,6 +345,51 @@ export class OrderBookService implements IOrderBookService {
         await this._connection
             .getRepository(PersistentSignedOrderV4Entity)
             .save(addedOrders, { chunk: DB_ORDERS_UPDATE_CHUNK_SIZE });
+    }
+
+    // tslint:disable-next-line:prefer-function-over-method
+    public async getOffersAsync(page: number, perPage: number): Promise<any> {
+        const signedOfferEntities = await this._connection.manager.find(SignedOfferEntity);
+        const apiOffers: SignedLimitOffer[] =
+            (signedOfferEntities as Required<SignedOfferEntity[]>).map(orderUtils.deserializeOffer);
+
+        return paginationUtils.paginate(apiOffers, page, perPage);
+    }
+
+    // tslint:disable-next-line:prefer-function-over-method
+    public async getOfferByOfferHashAsync(offerHash: string): Promise<any> {
+        const signedOfferEntity =
+            await this._connection.manager.findOne(SignedOfferEntity, offerHash);
+
+        return orderUtils.deserializeOffer(signedOfferEntity as Required<SignedOfferEntity>);
+    }
+
+    // tslint:disable-next-line:prefer-function-over-method
+    public async postOfferAsync(signedOfferEntity: SignedOfferEntity): Promise<any> {
+        await this._connection.getRepository(SignedOfferEntity).insert(signedOfferEntity);
+
+        return signedOfferEntity.offerHash;
+    }
+
+    // tslint:disable-next-line:prefer-function-over-method
+    public async getAddSignedOffersAsync(page: number, perPage: number): Promise<any> {
+        const addOfferLiquidityEntities =
+            await this._connection.manager.find(AddSignedOfferLiquidityEntity);
+
+        return paginationUtils.paginate(addOfferLiquidityEntities, page, perPage);
+    }
+
+    // tslint:disable-next-line:prefer-function-over-method
+    public async getAddSignedOfferByOfferHashAsync(offerHash: string): Promise<any> {
+        const signedOfferLiquidityEntity =
+            await this._connection.manager.findOne(AddSignedOfferLiquidityEntity, offerHash);
+
+        return signedOfferLiquidityEntity;
+    }
+
+    // tslint:disable-next-line:prefer-function-over-method
+    public async postAddSignedOfferAsync(): Promise<any> {
+        return 'postAddSignedOfferAsync Okay';
     }
 }
 
