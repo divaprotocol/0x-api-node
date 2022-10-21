@@ -23,6 +23,7 @@ import {
     DIVA_GOVERNANCE_ADDRESS,
     EXCHANGE_PROXY_ADDRESS,
     NULL_ADDRESS,
+    NULL_TEXT,
     ONE_SECOND_MS,
 } from '../constants';
 import { PersistentSignedOrderV4Entity, SignedOrderV4Entity } from '../entities';
@@ -353,13 +354,45 @@ export class OrderBookService implements IOrderBookService {
     }
 
     // tslint:disable-next-line:prefer-function-over-method
-    public async getOffersAsync(page: number, perPage: number): Promise<any> {
+    public async getOffersAsync(req: OffersFilterType): Promise<any> {
         const signedOfferEntities = await this._connection.manager.find(SignedOfferEntity);
         const apiOffers: SignedLimitOffer[] = (signedOfferEntities as Required<SignedOfferEntity[]>).map(
             orderUtils.deserializeOffer,
         );
 
-        return paginationUtils.paginate(apiOffers, page, perPage);
+        const filterOffers: SignedLimitOffer[] = apiOffers.filter((apiOffer: SignedLimitOffer) => {
+            if (req.maker !== NULL_ADDRESS && apiOffer.maker.toLocaleLowerCase() === req.maker) {
+                return false;
+            }
+            if (req.taker !== NULL_ADDRESS && apiOffer.taker.toLocaleLowerCase() !== req.taker) {
+                return false;
+            }
+            if (req.makerDirection !== NULL_TEXT && req.makerDirection !== apiOffer.makerDirection) {
+                return false;
+            }
+            if (req.referenceAsset !== NULL_TEXT && apiOffer.referenceAsset !== req.referenceAsset) {
+                return false;
+            }
+            if (
+                req.collateralToken !== NULL_ADDRESS &&
+                apiOffer.collateralToken.toLocaleLowerCase() !== req.collateralToken
+            ) {
+                return false;
+            }
+            if (req.dataProvider !== NULL_ADDRESS && apiOffer.dataProvider.toLocaleLowerCase() !== req.dataProvider) {
+                return false;
+            }
+            if (
+                req.permissionedERC721Token !== NULL_ADDRESS &&
+                apiOffer.permissionedERC721Token.toLocaleLowerCase() !== req.permissionedERC721Token
+            ) {
+                return false;
+            }
+
+            return true;
+        });
+
+        return paginationUtils.paginate(filterOffers, req.page, req.perPage);
     }
 
     // tslint:disable-next-line:prefer-function-over-method
@@ -377,13 +410,32 @@ export class OrderBookService implements IOrderBookService {
     }
 
     // tslint:disable-next-line:prefer-function-over-method
-    public async offerLiquiditiesAsync(page: number, perPage: number): Promise<any> {
+    public async offerLiquiditiesAsync(req: OffersLiquidityFilterType): Promise<any> {
         const signedOfferLiquidityEntities = await this._connection.manager.find(SignedOfferLiquidityEntity);
-        const apiOffers: SignedLimitOfferLiquidity[] = (
+        const apiOfferLiquidities: SignedLimitOfferLiquidity[] = (
             signedOfferLiquidityEntities as Required<SignedOfferLiquidityEntity[]>
         ).map(orderUtils.deserializeOfferLiquidity);
 
-        return paginationUtils.paginate(apiOffers, page, perPage);
+        const filterOfferLiquidities: SignedLimitOfferLiquidity[] = apiOfferLiquidities.filter(
+            (apiOfferLiquidity: SignedLimitOfferLiquidity) => {
+                if (req.maker !== NULL_ADDRESS && apiOfferLiquidity.maker.toLocaleLowerCase() === req.maker) {
+                    return false;
+                }
+                if (req.taker !== NULL_ADDRESS && apiOfferLiquidity.taker.toLocaleLowerCase() !== req.taker) {
+                    return false;
+                }
+                if (req.makerDirection !== NULL_TEXT && req.makerDirection !== apiOfferLiquidity.makerDirection) {
+                    return false;
+                }
+                if (req.poolId !== NULL_TEXT && apiOfferLiquidity.poolId !== req.poolId) {
+                    return false;
+                }
+
+                return true;
+            },
+        );
+
+        return paginationUtils.paginate(filterOfferLiquidities, req.page, req.perPage);
     }
 
     // tslint:disable-next-line:prefer-function-over-method

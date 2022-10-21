@@ -65,6 +65,7 @@ export interface SignedLimitOfferLiquidity {
     offerExpiry: string;
     minimumTakerFillAmount: string;
     salt: string;
+    poolId: string;
     actualTakerFillableAmount: string;
     signature: Signature;
 }
