@@ -270,27 +270,29 @@ export class OrderBookService implements IOrderBookService {
         await this._orderWatcher.postOrdersAsync(signedOrders);
         // After creating these orders, we get the updated bid and ask information for the pool.
         const result: any[] = [];
-        await Promise.all(signedOrders.map(async (signedOrder) => {
-            const isExists = result.filter((item) => item[0] === signedOrder.poolId);
+        await Promise.all(
+            signedOrders.map(async (signedOrder) => {
+                const isExists = result.filter((item) => item[0] === signedOrder.poolId);
 
-            if (isExists.length === 0) {
-                result.push({
-                    poolId: signedOrder.poolId,
-                    first: await this.getOrderBookAsync(
-                        DEFAULT_PAGE,
-                        DEFAULT_PER_PAGE,
-                        signedOrder.makerToken,
-                        signedOrder.takerToken,
-                    ),
-                    second: await this.getOrderBookAsync(
-                        DEFAULT_PAGE,
-                        DEFAULT_PER_PAGE,
-                        signedOrder.takerToken,
-                        signedOrder.makerToken,
-                    ),
-                });
-            }
-        }));
+                if (isExists.length === 0) {
+                    result.push({
+                        poolId: signedOrder.poolId,
+                        first: await this.getOrderBookAsync(
+                            DEFAULT_PAGE,
+                            DEFAULT_PER_PAGE,
+                            signedOrder.makerToken,
+                            signedOrder.takerToken,
+                        ),
+                        second: await this.getOrderBookAsync(
+                            DEFAULT_PAGE,
+                            DEFAULT_PER_PAGE,
+                            signedOrder.takerToken,
+                            signedOrder.makerToken,
+                        ),
+                    });
+                }
+            }),
+        );
 
         // Send the data using websocket to every clients
         wss.clients.forEach((client) => {
@@ -303,27 +305,29 @@ export class OrderBookService implements IOrderBookService {
         await this._orderWatcher.postOrdersAsync(signedOrders);
         // After creating these orders, we get the updated bid and ask information for the pool.
         const result: any[] = [];
-        await Promise.all(signedOrders.map(async (signedOrder) => {
-            const isExists = result.filter((item) => item[0] === signedOrder.poolId);
+        await Promise.all(
+            signedOrders.map(async (signedOrder) => {
+                const isExists = result.filter((item) => item[0] === signedOrder.poolId);
 
-            if (isExists.length === 0) {
-                result.push({
-                    poolId: signedOrder.poolId,
-                    first: await this.getOrderBookAsync(
-                        DEFAULT_PAGE,
-                        DEFAULT_PER_PAGE,
-                        signedOrder.makerToken,
-                        signedOrder.takerToken,
-                    ),
-                    second: await this.getOrderBookAsync(
-                        DEFAULT_PAGE,
-                        DEFAULT_PER_PAGE,
-                        signedOrder.takerToken,
-                        signedOrder.makerToken,
-                    ),
-                });
-            }
-        }));
+                if (isExists.length === 0) {
+                    result.push({
+                        poolId: signedOrder.poolId,
+                        first: await this.getOrderBookAsync(
+                            DEFAULT_PAGE,
+                            DEFAULT_PER_PAGE,
+                            signedOrder.makerToken,
+                            signedOrder.takerToken,
+                        ),
+                        second: await this.getOrderBookAsync(
+                            DEFAULT_PAGE,
+                            DEFAULT_PER_PAGE,
+                            signedOrder.takerToken,
+                            signedOrder.makerToken,
+                        ),
+                    });
+                }
+            }),
+        );
 
         // Send the data using websocket to every clients
         wss.clients.forEach((client) => {
@@ -351,17 +355,16 @@ export class OrderBookService implements IOrderBookService {
     // tslint:disable-next-line:prefer-function-over-method
     public async getOffersAsync(page: number, perPage: number): Promise<any> {
         const signedOfferEntities = await this._connection.manager.find(SignedOfferEntity);
-        const apiOffers: SignedLimitOffer[] =
-            (signedOfferEntities as Required<SignedOfferEntity[]>)
-            .map(orderUtils.deserializeOffer);
+        const apiOffers: SignedLimitOffer[] = (signedOfferEntities as Required<SignedOfferEntity[]>).map(
+            orderUtils.deserializeOffer,
+        );
 
         return paginationUtils.paginate(apiOffers, page, perPage);
     }
 
     // tslint:disable-next-line:prefer-function-over-method
     public async getOfferByOfferHashAsync(offerHash: string): Promise<any> {
-        const signedOfferEntity =
-            await this._connection.manager.findOne(SignedOfferEntity, offerHash);
+        const signedOfferEntity = await this._connection.manager.findOne(SignedOfferEntity, offerHash);
 
         return orderUtils.deserializeOffer(signedOfferEntity as Required<SignedOfferEntity>);
     }
@@ -375,29 +378,27 @@ export class OrderBookService implements IOrderBookService {
 
     // tslint:disable-next-line:prefer-function-over-method
     public async offerLiquiditiesAsync(page: number, perPage: number): Promise<any> {
-        const signedOfferLiquidityEntities =
-            await this._connection.manager.find(SignedOfferLiquidityEntity);
-        const apiOffers: SignedLimitOfferLiquidity[] =
-            (signedOfferLiquidityEntities as Required<SignedOfferLiquidityEntity[]>)
-            .map(orderUtils.deserializeOfferLiquidity);
+        const signedOfferLiquidityEntities = await this._connection.manager.find(SignedOfferLiquidityEntity);
+        const apiOffers: SignedLimitOfferLiquidity[] = (
+            signedOfferLiquidityEntities as Required<SignedOfferLiquidityEntity[]>
+        ).map(orderUtils.deserializeOfferLiquidity);
 
         return paginationUtils.paginate(apiOffers, page, perPage);
     }
 
     // tslint:disable-next-line:prefer-function-over-method
     public async getOfferLiquidityByOfferHashAsync(offerHash: string): Promise<any> {
-        const signedOfferLiquidityEntity =
-            await this._connection.manager.findOne(SignedOfferLiquidityEntity, offerHash);
+        const signedOfferLiquidityEntity = await this._connection.manager.findOne(
+            SignedOfferLiquidityEntity,
+            offerHash,
+        );
 
         return signedOfferLiquidityEntity;
     }
 
     // tslint:disable-next-line:prefer-function-over-method
-    public async postOfferLiquidityAsync(
-        signedOfferLiquidityEntity: SignedOfferLiquidityEntity
-    ): Promise<any> {
-        await this._connection.getRepository(SignedOfferLiquidityEntity)
-            .insert(signedOfferLiquidityEntity);
+    public async postOfferLiquidityAsync(signedOfferLiquidityEntity: SignedOfferLiquidityEntity): Promise<any> {
+        await this._connection.getRepository(SignedOfferLiquidityEntity).insert(signedOfferLiquidityEntity);
 
         return signedOfferLiquidityEntity.offerHash;
     }
