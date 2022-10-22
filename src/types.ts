@@ -53,6 +53,8 @@ export interface SignedLimitOffer {
     permissionedERC721Token: string;
     salt: string;
     signature: Signature;
+    chainId: string;
+    verifyingContract: string;
 }
 
 export interface SignedLimitOfferLiquidity {
