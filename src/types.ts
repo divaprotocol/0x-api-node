@@ -70,6 +70,8 @@ export interface SignedLimitOfferLiquidity {
     poolId: string;
     actualTakerFillableAmount: string;
     signature: Signature;
+    chainId: string;
+    verifyingContract: string;
 }
 
 /** BEGIN SRA TYPES */
