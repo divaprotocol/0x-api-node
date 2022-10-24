@@ -32,7 +32,7 @@ export interface SignedLimitOrder extends LimitOrderFields {
     poolId?: number;
 }
 
-export interface SignedLimitOffer {
+export interface LimitOfferCreateContingentPool {
     offerHash: string;
     maker: string;
     taker: string;
@@ -57,7 +57,7 @@ export interface SignedLimitOffer {
     verifyingContract: string;
 }
 
-export interface SignedLimitOfferLiquidity {
+export interface LimitOfferAddLiquidity {
     offerHash: string;
     maker: string;
     taker: string;
