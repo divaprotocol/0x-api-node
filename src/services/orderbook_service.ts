@@ -362,10 +362,10 @@ export class OrderBookService implements IOrderBookService {
 
         const filterEntities: OfferCreateContingentPool[] = apiEntities.filter(
             (apiEntity: OfferCreateContingentPool) => {
-                if (req.maker !== NULL_ADDRESS && apiEntity.maker.toLocaleLowerCase() !== req.maker) {
+                if (req.maker !== NULL_ADDRESS && apiEntity.maker.toLowerCase() !== req.maker) {
                     return false;
                 }
-                if (req.taker !== NULL_ADDRESS && apiEntity.taker.toLocaleLowerCase() !== req.taker) {
+                if (req.taker !== NULL_ADDRESS && apiEntity.taker.toLowerCase() !== req.taker) {
                     return false;
                 }
                 if (req.makerDirection !== NULL_TEXT && req.makerDirection !== apiEntity.makerDirection) {
@@ -376,19 +376,16 @@ export class OrderBookService implements IOrderBookService {
                 }
                 if (
                     req.collateralToken !== NULL_ADDRESS &&
-                    apiEntity.collateralToken.toLocaleLowerCase() !== req.collateralToken
+                    apiEntity.collateralToken.toLowerCase() !== req.collateralToken
                 ) {
                     return false;
                 }
-                if (
-                    req.dataProvider !== NULL_ADDRESS &&
-                    apiEntity.dataProvider.toLocaleLowerCase() !== req.dataProvider
-                ) {
+                if (req.dataProvider !== NULL_ADDRESS && apiEntity.dataProvider.toLowerCase() !== req.dataProvider) {
                     return false;
                 }
                 if (
                     req.permissionedERC721Token !== NULL_ADDRESS &&
-                    apiEntity.permissionedERC721Token.toLocaleLowerCase() !== req.permissionedERC721Token
+                    apiEntity.permissionedERC721Token.toLowerCase() !== req.permissionedERC721Token
                 ) {
                     return false;
                 }
@@ -429,10 +426,10 @@ export class OrderBookService implements IOrderBookService {
         );
 
         const filterEntities: OfferAddLiquidity[] = apiEntities.filter((apiEntity: OfferAddLiquidity) => {
-            if (req.maker !== NULL_ADDRESS && apiEntity.maker.toLocaleLowerCase() !== req.maker) {
+            if (req.maker !== NULL_ADDRESS && apiEntity.maker.toLowerCase() !== req.maker) {
                 return false;
             }
-            if (req.taker !== NULL_ADDRESS && apiEntity.taker.toLocaleLowerCase() !== req.taker) {
+            if (req.taker !== NULL_ADDRESS && apiEntity.taker.toLowerCase() !== req.taker) {
                 return false;
             }
             if (req.makerDirection !== NULL_TEXT && req.makerDirection !== apiEntity.makerDirection) {
@@ -444,10 +441,13 @@ export class OrderBookService implements IOrderBookService {
             if (req.referenceAsset !== NULL_TEXT && apiEntity.referenceAsset !== req.referenceAsset) {
                 return false;
             }
-            if (req.collateralToken !== NULL_ADDRESS && apiEntity.collateralToken !== req.collateralToken) {
+            if (
+                req.collateralToken !== NULL_ADDRESS &&
+                apiEntity.collateralToken.toLowerCase() !== req.collateralToken
+            ) {
                 return false;
             }
-            if (req.dataProvider !== NULL_ADDRESS && apiEntity.dataProvider !== req.dataProvider) {
+            if (req.dataProvider !== NULL_ADDRESS && apiEntity.dataProvider.toLowerCase() !== req.dataProvider) {
                 return false;
             }
 
