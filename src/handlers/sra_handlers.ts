@@ -201,6 +201,11 @@ export class SRAHandlers {
         const makerDirection =
             req.query.makerDirection === undefined ? NULL_TEXT : (req.query.makerDirection as string);
         const poolId = req.query.poolId === undefined ? NULL_TEXT : (req.query.poolId as string);
+        const referenceAsset =
+            req.query.referenceAsset === undefined ? NULL_TEXT : (req.query.referenceAsset as string);
+        const collateralToken =
+            req.query.collateralToken === undefined ? NULL_ADDRESS : (req.query.collateralToken as string);
+        const dataProvider = req.query.dataProvider === undefined ? NULL_ADDRESS : (req.query.dataProvider as string);
 
         const response = await this._orderBook.offerAddLiquidityAsync({
             page,
@@ -209,6 +214,9 @@ export class SRAHandlers {
             taker,
             makerDirection,
             poolId,
+            referenceAsset,
+            collateralToken,
+            dataProvider,
         });
 
         res.status(HttpStatus.OK).send(response);
