@@ -52,9 +52,9 @@ export interface OfferCreateContingentPool {
     capacity: string;
     permissionedERC721Token: string;
     salt: string;
-    signature: Signature;
     chainId: number;
     verifyingContract: string;
+    signature: Signature;
 }
 
 export interface OfferAddLiquidity {
@@ -69,9 +69,12 @@ export interface OfferAddLiquidity {
     salt: string;
     poolId: string;
     actualTakerFillableAmount: string;
-    signature: Signature;
     chainId: number;
     verifyingContract: string;
+    referenceAsset: string;
+    collateralToken: string;
+    dataProvider: string;
+    signature: Signature;
 }
 
 /** BEGIN SRA TYPES */
