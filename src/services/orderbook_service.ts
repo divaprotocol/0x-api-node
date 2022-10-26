@@ -450,6 +450,12 @@ export class OrderBookService implements IOrderBookService {
             if (req.dataProvider !== NULL_ADDRESS && apiEntity.dataProvider.toLowerCase() !== req.dataProvider) {
                 return false;
             }
+            if (
+                req.permissionedERC721Token !== NULL_ADDRESS &&
+                apiEntity.permissionedERC721Token.toLowerCase() !== req.permissionedERC721Token
+            ) {
+                return false;
+            }
 
             return true;
         });
@@ -480,11 +486,26 @@ export class OrderBookService implements IOrderBookService {
         const collateralToken = parameters[0].collateralToken;
         const dataProvider = parameters[0].dataProvider;
 
+        // Get longToken address
+        const longToken = parameters[0].longToken;
+
+        // Get PermissionedPositionToken contract to call web3 function
+        const permissionedPositionContract = new Contract(longToken as string, PermissionedPositionTokenABI, provider);
+        // Get PermissionedERC721Token address
+        let permissionedERC721Token = NULL_ADDRESS;
+
+        try {
+            permissionedERC721Token = await permissionedPositionContract.functions.permissionedERC721Token();
+        } catch (err) {
+            logger.warn('There is no permissionedERC721Token for this pool.');
+        }
+
         const fillableOfferAddLiquidityEntity: OfferAddLiquidityEntity = {
             ...offerAddLiquidityEntity,
             referenceAsset,
             collateralToken,
             dataProvider,
+            permissionedERC721Token,
         };
         await this._connection.getRepository(OfferAddLiquidityEntity).insert(fillableOfferAddLiquidityEntity);
 
