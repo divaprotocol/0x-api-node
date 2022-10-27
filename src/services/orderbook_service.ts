@@ -614,11 +614,7 @@ export class OrderBookService implements IOrderBookService {
                     // Get the offerCreateContingentPoolStatus
                     const status = offerCreateContingentPoolInfo[0][1];
                     // Delete the inValid, canceled, expired offerCreateContingentPools
-                    if (
-                        status === OfferStatus.Cancelled ||
-                        status === OfferStatus.Invalid ||
-                        status === OfferStatus.Expired
-                    ) {
+                    if (status !== OfferStatus.Fillable) {
                         await this._connection.manager.delete(OfferCreateContingentPoolEntity, apiEntity.offerHash);
                     }
                 } catch (err) {
@@ -639,11 +635,7 @@ export class OrderBookService implements IOrderBookService {
                 try {
                     const status = offerAddLiquidityInfo[0][1];
                     // Delete the inValid, canceled, expired offerAddLiquidity
-                    if (
-                        status === OfferStatus.Cancelled ||
-                        status === OfferStatus.Invalid ||
-                        status === OfferStatus.Expired
-                    ) {
+                    if (status !== OfferStatus.Fillable) {
                         await this._connection.manager.delete(OfferAddLiquidityEntity, apiEntity.offerHash);
                     }
                 } catch (err) {
