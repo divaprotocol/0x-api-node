@@ -10,6 +10,7 @@ import * as WebSocket from 'ws';
 import { BalanceCheckerContract, LimitOrder } from '../asset-swapper';
 import { fetchPoolLists } from '../asset-swapper/utils/market_operation_utils/pools_cache/pool_list_cache';
 import {
+    CHAIN_ID,
     DB_ORDERS_UPDATE_CHUNK_SIZE,
     MAX_ORDER_EXPIRATION_BUFFER_SECONDS,
     SRA_ORDER_EXPIRATION_BUFFER_SECONDS,
@@ -27,6 +28,7 @@ import {
     NULL_ADDRESS,
     NULL_TEXT,
     ONE_SECOND_MS,
+    QUOTE_ORDER_EXPIRATION_BUFFER_MS,
 } from '../constants';
 import { PersistentSignedOrderV4Entity, SignedOrderV4Entity } from '../entities';
 import { ExpiredOrderError, ValidationError, ValidationErrorCodes, ValidationErrorReasons } from '../errors';
@@ -512,6 +514,126 @@ export class OrderBookService implements IOrderBookService {
         await this._connection.getRepository(OfferAddLiquidityEntity).insert(fillableOfferAddLiquidityEntity);
 
         return offerAddLiquidityEntity.offerHash;
+    }
+
+    // tslint:disable-next-line:prefer-function-over-method
+    public async checkVaildateOffersAsync(): Promise<void> {
+        // Get provider to call web3 function
+        const provider = new InfuraProvider(CHAIN_ID, INFURA_API_KEY);
+
+        // Check validate of offerCreateContingentPools
+        const offerCreateContingentPoolEntities = await this._connection.manager.find(OfferCreateContingentPoolEntity);
+        const apiOfferCreateContingentPoolEntities: OfferCreateContingentPool[] = (
+            offerCreateContingentPoolEntities as Required<OfferCreateContingentPoolEntity[]>
+        ).map(orderUtils.deserializeOfferCreateContingentPool);
+
+        await Promise.all(
+            apiOfferCreateContingentPoolEntities.map(async (apiEntity) => {
+                try {
+                    // Get DIVA contract to call web3 function
+                    const divaContract = new Contract(
+                        apiEntity.verifyingContract || NULL_ADDRESS,
+                        divaContractABI,
+                        provider,
+                    );
+                    // Get parameters to call the getOfferRelevantStateCreateContingentPool function
+                    const offerCreateContingentPool = {
+                        maker: apiEntity.maker,
+                        taker: apiEntity.taker,
+                        makerCollateralAmount: apiEntity.makerCollateralAmount,
+                        takerCollateralAmount: apiEntity.takerCollateralAmount,
+                        makerDirection: apiEntity.makerDirection,
+                        offerExpiry: apiEntity.offerExpiry,
+                        minimumTakerFillAmount: apiEntity.minimumTakerFillAmount,
+                        referenceAsset: apiEntity.referenceAsset,
+                        expiryTime: apiEntity.expiryTime,
+                        floor: apiEntity.floor,
+                        inflection: apiEntity.inflection,
+                        cap: apiEntity.cap,
+                        gradient: apiEntity.gradient,
+                        collateralToken: apiEntity.collateralToken,
+                        dataProvider: apiEntity.dataProvider,
+                        capacity: apiEntity.capacity,
+                        permissionedERC721Token: apiEntity.permissionedERC721Token,
+                        salt: apiEntity.salt,
+                    };
+                    const signature = apiEntity.signature;
+
+                    // Get the offerCreateContingentPoolStatus
+                    const offerCreateContingentPoolStatus =
+                        await divaContract.functions.getOfferRelevantStateCreateContingentPool(
+                            offerCreateContingentPool,
+                            signature,
+                        );
+                    const status = offerCreateContingentPoolStatus[0].status;
+
+                    // Delete the inValid, canceled, expired offerCreateContingentPools
+                    if (
+                        status === OfferStatus.Cancelled ||
+                        status === OfferStatus.Invalid ||
+                        status === OfferStatus.Expired
+                    ) {
+                        await this._connection.manager.delete(OfferCreateContingentPoolEntity, apiEntity.offerHash);
+                    }
+                } catch (err) {
+                    logger.warn(
+                        'Error deleting offerCreateContingentPool using offerHash = ',
+                        apiEntity.offerHash,
+                        '.',
+                    );
+                }
+            }),
+        );
+
+        // Check validate of offerAddLiquidities
+        const offerAddLiquidityEntities = await this._connection.manager.find(OfferAddLiquidityEntity);
+        const apiOfferAddLiquidityEntities: OfferAddLiquidity[] = (
+            offerAddLiquidityEntities as Required<OfferAddLiquidityEntity[]>
+        ).map(orderUtils.deserializeOfferAddLiquidity);
+
+        await Promise.all(
+            apiOfferAddLiquidityEntities.map(async (apiEntity) => {
+                try {
+                    // Get DIVA contract to call web3 function
+                    const divaContract = new Contract(
+                        apiEntity.verifyingContract || NULL_ADDRESS,
+                        divaContractABI,
+                        provider,
+                    );
+                    // Get parameters to call the getOfferRelevantStateAddLiquidity function
+                    const offerAddLiquidity = {
+                        maker: apiEntity.maker,
+                        taker: apiEntity.taker,
+                        makerCollateralAmount: apiEntity.makerCollateralAmount,
+                        takerCollateralAmount: apiEntity.takerCollateralAmount,
+                        makerDirection: apiEntity.makerDirection,
+                        offerExpiry: apiEntity.offerExpiry,
+                        minimumTakerFillAmount: apiEntity.minimumTakerFillAmount,
+                        poolId: apiEntity.poolId,
+                        salt: apiEntity.salt,
+                    };
+                    const signature = apiEntity.signature;
+
+                    // Get the offerAddLiquidityStatus
+                    const offerAddLiquidityStatus = await divaContract.functions.getOfferRelevantStateAddLiquidity(
+                        offerAddLiquidity,
+                        signature,
+                    );
+                    const status = offerAddLiquidityStatus[0].status;
+
+                    // Delete the inValid, canceled, expired offerAddLiquidity
+                    if (
+                        status === OfferStatus.Cancelled ||
+                        status === OfferStatus.Invalid ||
+                        status === OfferStatus.Expired
+                    ) {
+                        await this._connection.manager.delete(OfferAddLiquidityEntity, apiEntity.offerHash);
+                    }
+                } catch (err) {
+                    logger.warn('Error deleting offerAddLiquidity using offerHash = ', apiEntity.offerHash, '.');
+                }
+            }),
+        );
     }
 }
 
