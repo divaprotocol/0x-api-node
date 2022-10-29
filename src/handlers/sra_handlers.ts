@@ -248,6 +248,60 @@ export class SRAHandlers {
 
         res.status(HttpStatus.OK).send(response);
     }
+    public async offerRemoveLiquidityAsync(req: express.Request, res: express.Response): Promise<void> {
+        const { page, perPage } = paginationUtils.parsePaginationConfig(req);
+        const maker = req.query.maker === undefined ? NULL_ADDRESS : (req.query.maker as string).toLowerCase();
+        const taker = req.query.taker === undefined ? NULL_ADDRESS : (req.query.taker as string).toLowerCase();
+        const makerDirection =
+            req.query.makerDirection === undefined ? NULL_TEXT : (req.query.makerDirection as string);
+        const poolId = req.query.poolId === undefined ? NULL_TEXT : (req.query.poolId as string);
+        const referenceAsset =
+            req.query.referenceAsset === undefined ? NULL_TEXT : (req.query.referenceAsset as string);
+        const collateralToken =
+            req.query.collateralToken === undefined
+                ? NULL_ADDRESS
+                : (req.query.collateralToken as string).toLowerCase();
+        const dataProvider =
+            req.query.dataProvider === undefined ? NULL_ADDRESS : (req.query.dataProvider as string).toLowerCase();
+        const permissionedERC721Token =
+            req.query.permissionedERC721Token === undefined
+                ? NULL_ADDRESS
+                : (req.query.permissionedERC721Token as string).toLowerCase();
+
+        const response = await this._orderBook.offerRemoveLiquidityAsync({
+            page,
+            perPage,
+            maker,
+            taker,
+            makerDirection,
+            poolId,
+            referenceAsset,
+            collateralToken,
+            dataProvider,
+            permissionedERC721Token,
+        });
+
+        res.status(HttpStatus.OK).send(response);
+    }
+    public async getOfferRemoveLiquidityByOfferHashAsync(req: express.Request, res: express.Response): Promise<void> {
+        const response = await this._orderBook.getOfferRemoveLiquidityByOfferHashAsync(req.params.offerHash);
+
+        res.status(HttpStatus.OK).send(response);
+    }
+    public async postOfferRemoveLiquidityAsync(req: express.Request, res: express.Response): Promise<void> {
+        schemaUtils.validateSchema(req.body, schemas.sraOfferRemoveLiquiditySchema);
+
+        const offerRemoveLiquidityEntity = new OfferRemoveLiquidityEntity({
+            ...req.body,
+            referenceAsset: NULL_TEXT,
+            collateralToken: NULL_ADDRESS,
+            dataProvider: NULL_ADDRESS,
+            permissionedERC721Token: NULL_ADDRESS,
+        });
+        const response = await this._orderBook.postOfferRemoveLiquidityAsync(offerRemoveLiquidityEntity);
+
+        res.status(HttpStatus.OK).send(response);
+    }
     public async postPersistentOrderAsync(req: express.Request, res: express.Response): Promise<void> {
         const shouldSkipConfirmation = req.query.skipConfirmation === 'true';
         const apiKey = req.header('0x-api-key');

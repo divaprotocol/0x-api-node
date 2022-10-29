@@ -37,7 +37,6 @@ export interface OfferType {
     maker: string;
     taker: string;
     makerCollateralAmount: string;
-    takerCollateralAmount: string;
     makerDirection: string;
     offerExpiry: string;
     minimumTakerFillAmount: string;
@@ -52,6 +51,7 @@ export interface OfferType {
 }
 
 export interface OfferCreateContingentPool extends OfferType {
+    takerCollateralAmount: string;
     expiryTime: string;
     floor: string;
     inflection: string;
@@ -61,6 +61,13 @@ export interface OfferCreateContingentPool extends OfferType {
 }
 
 export interface OfferAddLiquidity extends OfferType {
+    takerCollateralAmount: string;
+    poolId: string;
+    actualTakerFillableAmount: string;
+}
+
+export interface OfferRemoveLiquidity extends OfferType {
+    positionTokenAmount: string;
     poolId: string;
     actualTakerFillableAmount: string;
 }
