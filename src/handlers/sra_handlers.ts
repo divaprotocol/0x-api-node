@@ -189,7 +189,8 @@ export class SRAHandlers {
             dataProvider: NULL_ADDRESS,
             permissionedERC721Token: NULL_ADDRESS,
         });
-        const response = await this._orderBook.postOfferLiquidityAsync(offerAddLiquidityEntity);
+
+        const response = await this._orderBook.postOfferLiquidityAsync(offerAddLiquidityEntity, OfferLiquidityType.Add);
 
         res.status(HttpStatus.OK).send(response);
     }
@@ -214,7 +215,11 @@ export class SRAHandlers {
             dataProvider: NULL_ADDRESS,
             permissionedERC721Token: NULL_ADDRESS,
         });
-        const response = await this._orderBook.postOfferLiquidityAsync(offerRemoveLiquidityEntity);
+
+        const response = await this._orderBook.postOfferLiquidityAsync(
+            offerRemoveLiquidityEntity,
+            OfferLiquidityType.Remove,
+        );
 
         res.status(HttpStatus.OK).send(response);
     }

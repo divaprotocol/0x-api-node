@@ -54,6 +54,11 @@ export enum OfferStatus {
     Fillable,
 }
 
+export enum OfferLiquidityType {
+    Add = 'Add',
+    Remove = 'Remove',
+}
+
 /**
  * A taker-integrator of the 0x API.
  */
