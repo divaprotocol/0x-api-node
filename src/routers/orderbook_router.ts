@@ -55,7 +55,7 @@ export function createOrderBookRouter(orderBook: IOrderBookService): express.Rou
     /**
      * GET OfferCreateContingentPool retrieves a list of OfferCreateContingentPools given query parameters.
      */
-    router.get('/offers_create_contingent_pool', asyncHandler(handlers.offerCreateContingentPoolsAsync.bind(handlers)));
+    router.get('/offer_create_contingent_pool', asyncHandler(handlers.offerCreateContingentPoolsAsync.bind(handlers)));
     /**
      * POST OfferCreateContingentPool endpoint submits an OfferCreateContingentPool to the Relayer.
      */
@@ -73,7 +73,7 @@ export function createOrderBookRouter(orderBook: IOrderBookService): express.Rou
     /**
      * GET OfferAddLiquidity endpoint retrieves a list of OfferAddLiquidities given query parameters.
      */
-    router.get('/offers_add_liquidity', asyncHandler(handlers.offerAddLiquidityAsync.bind(handlers)));
+    router.get('/offer_add_liquidity', asyncHandler(handlers.offerAddLiquidityAsync.bind(handlers)));
     /**
      * POST OfferAddLiquidity endpoint submits an OfferAddLiquidity to the Relayer.
      */
@@ -88,7 +88,7 @@ export function createOrderBookRouter(orderBook: IOrderBookService): express.Rou
     /**
      * GET OfferRemoveLiquidity endpoint retrieves a list of OfferRemoveLiquidities given query parameters.
      */
-    router.get('/offers_remove_liquidity', asyncHandler(handlers.offerRemoveLiquidityAsync.bind(handlers)));
+    router.get('/offer_remove_liquidity', asyncHandler(handlers.offerRemoveLiquidityAsync.bind(handlers)));
     /**
      * POST OfferRemoveLiquidity endpoint submits an OfferRemoveLiquidity to the Relayer.
      */
