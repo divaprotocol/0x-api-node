@@ -102,6 +102,9 @@ export async function runHttpServiceAsync(
         app.use(ORDERBOOK_PATH, createOrderBookRouter(dependencies.orderBookService));
     }
 
+    // Offer http service
+    app.use(OFFER_PATH, createOfferRouter(dependencies.offerService));
+
     // metatxn http service
     if (dependencies.metaTransactionService) {
         app.use(META_TRANSACTION_V1_PATH, createMetaTransactionV1Router(dependencies.metaTransactionService));
