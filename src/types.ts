@@ -150,6 +150,7 @@ export interface OrderbookPriceRequest {
     feeRecipient: string;
     takerTokenFee: number;
     threshold: number;
+    count: number;
 }
 
 export interface OrderConfigRequestPayload {
