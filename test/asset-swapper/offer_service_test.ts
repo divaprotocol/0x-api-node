@@ -1,5 +1,5 @@
 import { Connection } from 'typeorm';
-import { OfferLiquidityType } from '../../src/config';
+
 import { NULL_ADDRESS, NULL_TEXT } from '../../src/constants';
 import { getDBConnectionAsync } from '../../src/db_connection';
 import {
@@ -9,6 +9,11 @@ import {
 } from '../../src/entities';
 import { OfferService } from '../../src/services/offer_service';
 import { OfferCreateContingentPoolFilterType, OfferLiquidityFilterType } from '../../src/types';
+
+enum OfferLiquidityType {
+    Add = 'Add',
+    Remove = 'Remove',
+}
 
 const SUITE_NAME = 'OfferService';
 
