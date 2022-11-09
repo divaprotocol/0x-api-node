@@ -1,11 +1,12 @@
 import { Connection } from 'typeorm';
-import 'mocha';
-
 import { OfferLiquidityType } from '../../src/config';
 import { NULL_ADDRESS, NULL_TEXT } from '../../src/constants';
 import { getDBConnectionAsync } from '../../src/db_connection';
-import { OfferAddLiquidityEntity, OfferCreateContingentPoolEntity, OfferRemoveLiquidityEntity } from '../../src/entities';
-import { logger } from '../../src/logger';
+import {
+    OfferAddLiquidityEntity,
+    OfferCreateContingentPoolEntity,
+    OfferRemoveLiquidityEntity,
+} from '../../src/entities';
 import { OfferService } from '../../src/services/offer_service';
 import { OfferCreateContingentPoolFilterType, OfferLiquidityFilterType } from '../../src/types';
 
@@ -41,7 +42,6 @@ describe(SUITE_NAME, () => {
 
     before(async () => {
         connection = await getDBConnectionAsync();
-        console.log('connection: ', connection)
         offerService = new OfferService(connection);
     });
 
