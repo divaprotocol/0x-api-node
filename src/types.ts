@@ -37,7 +37,7 @@ export interface OfferType {
     maker: string;
     taker: string;
     makerCollateralAmount: string;
-    makerDirection: boolean;
+    makerIsLong: boolean;
     offerExpiry: string;
     minimumTakerFillAmount: string;
     referenceAsset: string;
