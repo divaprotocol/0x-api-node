@@ -2,6 +2,7 @@ import { assert } from '@0x/assert';
 import { ChainId } from '@0x/contract-addresses';
 import { TokenMetadatasForChains, valueByChainId } from '@0x/token-metadata';
 import { BigNumber } from '@0x/utils';
+import { AlchemyProvider, InfuraProvider } from '@ethersproject/providers';
 import * as fs from 'fs';
 import * as _ from 'lodash';
 import { linearBuckets } from 'prom-client';
