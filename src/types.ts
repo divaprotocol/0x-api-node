@@ -53,7 +53,7 @@ export interface PaginatedCollection<T> {
 
 export interface SignedLimitOrder extends LimitOrderFields {
     signature: Signature;
-    poolId?: number;
+    poolId?: string;
 }
 
 export interface OfferType {

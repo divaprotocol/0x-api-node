@@ -253,9 +253,7 @@ export class OfferService {
                     return 1;
                 }
             })
-            .sort((a, b) => {
-                return Number(b.poolId) - Number(a.poolId);
-            });
+            .sort((a, b) => (a.poolId > b.poolId ? -1 : 1));
 
         const filterEntities = this.filterOfferLiquidity(apiEntities, req);
 
@@ -365,9 +363,7 @@ export class OfferService {
                     return 1;
                 }
             })
-            .sort((a, b) => {
-                return Number(b.poolId) - Number(a.poolId);
-            });
+            .sort((a, b) => (a.poolId > b.poolId ? -1 : 1));
 
         const filterEntities = this.filterOfferLiquidity(apiEntities, req);
 
