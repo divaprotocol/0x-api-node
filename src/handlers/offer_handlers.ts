@@ -55,11 +55,6 @@ export class OfferHandlers {
 
         const offerCreateContingentPoolEntity = new OfferCreateContingentPoolEntity(req.body);
 
-        if (Number(offerCreateContingentPoolEntity.cap || 0) > 1e59) {
-            res.status(HttpStatus.BAD_REQUEST).send({
-                message: 'The cap must be less than 1e59.',
-            });
-        }
         const response = await this._offerService.postOfferCreateContingentPoolAsync(offerCreateContingentPoolEntity);
 
         if (response.hash !== '') {
