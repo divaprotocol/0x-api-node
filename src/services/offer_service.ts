@@ -138,9 +138,46 @@ export class OfferService {
     public async postOfferCreateContingentPoolAsync(
         offerCreateContingentPoolEntity: OfferCreateContingentPoolEntity,
     ): Promise<any> {
-        await this._connection.getRepository(OfferCreateContingentPoolEntity).insert(offerCreateContingentPoolEntity);
+        try {
+            const divaContract = new Contract(
+                offerCreateContingentPoolEntity.verifyingContract || NULL_ADDRESS,
+                divaContractABI,
+                Web3Provider,
+            );
 
-        return offerCreateContingentPoolEntity.offerHash;
+            const { offerInfo, isSignatureValid, isValidInputParamsCreateContingentPool } =
+                await divaContract.functions.getOfferRelevantStateCreateContingentPool(
+                    offerCreateContingentPoolEntity,
+                    offerCreateContingentPoolEntity.signature,
+                );
+
+            if (!isValidInputParamsCreateContingentPool || offerInfo[1] !== OfferStatus.Fillable) {
+                return {
+                    hash: '',
+                    message: 'The input parameters for creating a new OfferCreateContingentPool are invalid.',
+                };
+            } else if (!isSignatureValid) {
+                return {
+                    hash: '',
+                    message: 'The signature is invalid.',
+                };
+            } else {
+                await this._connection
+                    .getRepository(OfferCreateContingentPoolEntity)
+                    .insert(offerCreateContingentPoolEntity);
+
+                return {
+                    hash: offerCreateContingentPoolEntity.offerHash,
+                    message: '',
+                };
+            }
+        } catch (err) {
+            logger.warn('Error creating new OfferCreateContingentPool.');
+            return {
+                hash: '',
+                message: 'Error creating new OfferCreateContingentPool.',
+            };
+        }
     }
 
     // tslint:disable-next-line:prefer-function-over-method
@@ -279,55 +316,118 @@ export class OfferService {
 
     // tslint:disable-next-line:prefer-function-over-method
     public async postOfferLiquidityAsync(offerLiquidityEntity: any, offerLiquidityType: string): Promise<any> {
-        // Get provider to call web3 function
-        // Get DIVA contract to call web3 function
-        const divaContract = new Contract(
-            offerLiquidityEntity.verifyingContract || NULL_ADDRESS,
-            divaContractABI,
-            Web3Provider,
-        );
-
-        // Get parameters of pool using pool id
-        const parameters = await divaContract.functions.getPoolParameters(offerLiquidityEntity.poolId);
-        const referenceAsset = parameters[0].referenceAsset;
-        const collateralToken = parameters[0].collateralToken;
-        const dataProvider = parameters[0].dataProvider;
-
-        // Get longToken address
-        const longToken = parameters[0].longToken;
-
-        // Get PermissionedPositionToken contract to call web3 function
-        const permissionedPositionContract = new Contract(
-            longToken as string,
-            PermissionedPositionTokenABI,
-            Web3Provider,
-        );
-        // Get PermissionedERC721Token address
-        let permissionedERC721Token = NULL_ADDRESS;
-
-        // TODO: If this call succeeds, longToken is permissionedPositionToken and the permissionedERC721Token exists, not NULL_ADDRESS.
-        // If this call fails, longToken is the permissionlessToken and the permissionedERC721Token is NULL_ADDRESS.
         try {
-            permissionedERC721Token = await permissionedPositionContract.functions.permissionedERC721Token();
+            // Get provider to call web3 function
+            // Get DIVA contract to call web3 function
+            const divaContract = new Contract(
+                offerLiquidityEntity.verifyingContract || NULL_ADDRESS,
+                divaContractABI,
+                Web3Provider,
+            );
+
+            // Get parameters of pool using pool id
+            const parameters = await divaContract.functions.getPoolParameters(offerLiquidityEntity.poolId);
+            const referenceAsset = parameters[0].referenceAsset;
+            const collateralToken = parameters[0].collateralToken;
+            const dataProvider = parameters[0].dataProvider;
+
+            // Get longToken address
+            const longToken = parameters[0].longToken;
+
+            let permissionedERC721Token = NULL_ADDRESS;
+            // Get PermissionedPositionToken contract to call web3 function
+            const permissionedPositionContract = new Contract(
+                longToken as string,
+                PermissionedPositionTokenABI,
+                Web3Provider,
+            );
+
+            try {
+                permissionedERC721Token = await permissionedPositionContract.functions.permissionedERC721Token();
+            } catch (err) {
+                logger.warn('There is no permissionedERC721Token for this pool.');
+            }
+            // Get PermissionedERC721Token address
+            const fillableOfferLiquidityEntity: any = {
+                ...offerLiquidityEntity,
+                referenceAsset,
+                collateralToken,
+                dataProvider,
+                permissionedERC721Token,
+            };
+
+            // TODO: If this call succeeds, longToken is permissionedPositionToken and the permissionedERC721Token exists, not NULL_ADDRESS.
+            // If this call fails, longToken is the permissionlessToken and the permissionedERC721Token is NULL_ADDRESS.
+
+            if (offerLiquidityType === OfferLiquidityType.Add) {
+                const { offerInfo, poolExists, isSignatureValid } =
+                    await divaContract.functions.getOfferRelevantStateAddLiquidity(
+                        fillableOfferLiquidityEntity,
+                        fillableOfferLiquidityEntity.signature,
+                    );
+
+                if (offerInfo[1] !== OfferStatus.Fillable) {
+                    return {
+                        hash: '',
+                        message: 'The input parameters for creating a new OfferAddLiquidity are invalid.',
+                    };
+                } else if (!isSignatureValid) {
+                    return {
+                        hash: '',
+                        message: 'The signature is invalid.',
+                    };
+                } else if (!poolExists) {
+                    return {
+                        hash: '',
+                        message: 'The pool not exists.',
+                    };
+                } else {
+                    await this._connection.getRepository(OfferAddLiquidityEntity).insert(fillableOfferLiquidityEntity);
+
+                    return {
+                        hash: fillableOfferLiquidityEntity.offerHash,
+                        message: '',
+                    };
+                }
+            } else {
+                const { offerInfo, poolExists, isSignatureValid } =
+                    await divaContract.functions.getOfferRelevantStateRemoveLiquidity(
+                        fillableOfferLiquidityEntity,
+                        fillableOfferLiquidityEntity.signature,
+                    );
+
+                if (offerInfo[1] !== OfferStatus.Fillable) {
+                    return {
+                        hash: '',
+                        message: 'The input parameters for creating a new OfferRemoveLiquidity are invalid.',
+                    };
+                } else if (!isSignatureValid) {
+                    return {
+                        hash: '',
+                        message: 'The signature is invalid.',
+                    };
+                } else if (!poolExists) {
+                    return {
+                        hash: '',
+                        message: 'The pool not exists.',
+                    };
+                } else {
+                    await this._connection
+                        .getRepository(OfferRemoveLiquidityEntity)
+                        .insert(fillableOfferLiquidityEntity);
+
+                    return {
+                        hash: fillableOfferLiquidityEntity.offerHash,
+                        message: '',
+                    };
+                }
+            }
         } catch (err) {
-            logger.warn('There is no permissionedERC721Token for this pool.');
+            return {
+                hash: '',
+                message: 'Error creating new OfferLiquidity.',
+            };
         }
-
-        const fillableOfferLiquidityEntity: any = {
-            ...offerLiquidityEntity,
-            referenceAsset,
-            collateralToken,
-            dataProvider,
-            permissionedERC721Token,
-        };
-
-        if (offerLiquidityType === OfferLiquidityType.Add) {
-            await this._connection.getRepository(OfferAddLiquidityEntity).insert(fillableOfferLiquidityEntity);
-        } else {
-            await this._connection.getRepository(OfferRemoveLiquidityEntity).insert(fillableOfferLiquidityEntity);
-        }
-
-        return offerLiquidityEntity.offerHash;
     }
 
     // tslint:disable-next-line:prefer-function-over-method

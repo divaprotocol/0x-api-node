@@ -62,7 +62,13 @@ export class OfferHandlers {
         }
         const response = await this._offerService.postOfferCreateContingentPoolAsync(offerCreateContingentPoolEntity);
 
-        res.status(HttpStatus.OK).send(response);
+        if (response.hash !== '') {
+            res.status(HttpStatus.OK).send(response.hash);
+        } else {
+            res.status(HttpStatus.BAD_REQUEST).send({
+                message: response.message,
+            });
+        }
     }
     public async offerAddLiquidityAsync(req: express.Request, res: express.Response): Promise<void> {
         const params = offerLiquidityFilterParams(req);
@@ -91,7 +97,13 @@ export class OfferHandlers {
             OfferLiquidityType.Add,
         );
 
-        res.status(HttpStatus.OK).send(response);
+        if (response.hash !== '') {
+            res.status(HttpStatus.OK).send(response.hash);
+        } else {
+            res.status(HttpStatus.BAD_REQUEST).send({
+                message: response.message,
+            });
+        }
     }
     public async offerRemoveLiquidityAsync(req: express.Request, res: express.Response): Promise<void> {
         const params = offerLiquidityFilterParams(req);
@@ -120,7 +132,13 @@ export class OfferHandlers {
             OfferLiquidityType.Remove,
         );
 
-        res.status(HttpStatus.OK).send(response);
+        if (response.hash !== '') {
+            res.status(HttpStatus.OK).send(response.hash);
+        } else {
+            res.status(HttpStatus.BAD_REQUEST).send({
+                message: response.message,
+            });
+        }
     }
 }
 
