@@ -151,10 +151,16 @@ export class OfferService {
                     offerCreateContingentPoolEntity.signature,
                 );
 
-            if (!isValidInputParamsCreateContingentPool || offerInfo[1] !== OfferStatus.Fillable) {
+            if (!isValidInputParamsCreateContingentPool) {
                 return {
                     hash: '',
-                    message: 'The input parameters for creating a new OfferCreateContingentPool are invalid.',
+                    message: 'The input parameters for creating a new contingent pool are invalid.',
+                };
+            } else if (offerInfo[1] !== OfferStatus.Fillable) {
+                return {
+                    hash: '',
+                    message:
+                        'The offer is already filled, expired, cancelled or invalid due to takerCollateralAmount = 0.',
                 };
             } else if (!isSignatureValid) {
                 return {
@@ -369,7 +375,8 @@ export class OfferService {
                 if (offerInfo[1] !== OfferStatus.Fillable) {
                     return {
                         hash: '',
-                        message: 'The input parameters for creating a new OfferAddLiquidity are invalid.',
+                        message:
+                            'The offer is already filled, expired, cancelled or invalid due to takerCollateralAmount = 0.',
                     };
                 } else if (!isSignatureValid) {
                     return {
@@ -379,7 +386,7 @@ export class OfferService {
                 } else if (!poolExists) {
                     return {
                         hash: '',
-                        message: 'The pool not exists.',
+                        message: 'The pool does not exist.',
                     };
                 } else {
                     await this._connection.getRepository(OfferAddLiquidityEntity).insert(fillableOfferLiquidityEntity);
@@ -399,7 +406,8 @@ export class OfferService {
                 if (offerInfo[1] !== OfferStatus.Fillable) {
                     return {
                         hash: '',
-                        message: 'The input parameters for creating a new OfferRemoveLiquidity are invalid.',
+                        message:
+                            'The offer is already filled, expired, cancelled or invalid due to positionTokenAmount = 0.',
                     };
                 } else if (!isSignatureValid) {
                     return {
@@ -409,7 +417,7 @@ export class OfferService {
                 } else if (!poolExists) {
                     return {
                         hash: '',
-                        message: 'The pool not exists.',
+                        message: 'The pool does not exist.',
                     };
                 } else {
                     await this._connection
