@@ -623,8 +623,7 @@ export class OfferService {
                 try {
                     const isInValid =
                         offerCreateContingentPoolInfo.length === 0 ||
-                        offerCreateContingentPoolInfo[0][1] !== OfferStatus.Fillable ||
-                        new BigNumber(apiEntity.cap).gt(1e59);
+                        offerCreateContingentPoolInfo[0][1] !== OfferStatus.Fillable;
                     // Delete the inValid, canceled, expired offerCreateContingentPools
                     if (isInValid) {
                         await this._connection.manager.delete(OfferCreateContingentPoolEntity, apiEntity.offerHash);
