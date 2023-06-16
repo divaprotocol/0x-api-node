@@ -2,7 +2,6 @@ import { assert } from '@0x/assert';
 import { ChainId } from '@0x/contract-addresses';
 import { TokenMetadatasForChains, valueByChainId } from '@0x/token-metadata';
 import { BigNumber } from '@0x/utils';
-import { AlchemyProvider, InfuraProvider } from '@ethersproject/providers';
 import * as fs from 'fs';
 import * as _ from 'lodash';
 import { linearBuckets } from 'prom-client';
@@ -45,19 +44,6 @@ enum EnvVarType {
     RfqMakerAssetOfferings,
     RateLimitConfig,
     JsonStringList,
-}
-
-export enum OfferStatus {
-    Invalid,
-    Cancelled,
-    Filled,
-    Expired,
-    Fillable,
-}
-
-export enum OfferLiquidityType {
-    Add = 'Add',
-    Remove = 'Remove',
 }
 
 /**
@@ -109,11 +95,6 @@ export const LOG_LEVEL: string = _.isEmpty(process.env.LOG_LEVEL)
 const HTTP_PORT = _.isEmpty(process.env.HTTP_PORT)
     ? 3000
     : assertEnvVarType('HTTP_PORT', process.env.HTTP_PORT, EnvVarType.Port);
-
-// Websocket port to listen on
-export const WEBSOCKET_PORT = _.isEmpty(process.env.WEBSOCKET_PORT)
-    ? 9000
-    : assertEnvVarType('WEBSOCKET_PORT', process.env.WEBSOCKET_PORT, EnvVarType.Port);
 
 // Network port for the healthcheck service at /healthz, if not provided, it uses the HTTP_PORT value.
 const HEALTHCHECK_HTTP_PORT = _.isEmpty(process.env.HEALTHCHECK_HTTP_PORT)

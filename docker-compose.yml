@@ -1,5 +1,4 @@
-version: '3.5'
-
+version: '3'
 services:
     ganache:
         image: '0xorg/ganache-cli:8.1.1'

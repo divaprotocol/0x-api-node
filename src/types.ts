@@ -29,45 +29,6 @@ export interface PaginatedCollection<T> {
 
 export interface SignedLimitOrder extends LimitOrderFields {
     signature: Signature;
-    poolId?: string;
-}
-
-export interface OfferType {
-    offerHash: string;
-    maker: string;
-    taker: string;
-    makerCollateralAmount: string;
-    makerIsLong: boolean;
-    offerExpiry: string;
-    minimumTakerFillAmount: string;
-    referenceAsset: string;
-    collateralToken: string;
-    dataProvider: string;
-    permissionedERC721Token: string;
-    signature: Signature;
-    chainId: number;
-    salt: string;
-    verifyingContract: string;
-}
-
-export interface OfferCreateContingentPool extends OfferType {
-    takerCollateralAmount: string;
-    expiryTime: string;
-    floor: string;
-    inflection: string;
-    cap: string;
-    gradient: string;
-    capacity: string;
-}
-
-export interface OfferAddLiquidity extends OfferType {
-    takerCollateralAmount: string;
-    poolId: string;
-}
-
-export interface OfferRemoveLiquidity extends OfferType {
-    positionTokenAmount: string;
-    poolId: string;
 }
 
 /** BEGIN SRA TYPES */
@@ -137,18 +98,6 @@ export interface SRAOrder {
 export interface OrderbookResponse {
     bids: PaginatedCollection<SRAOrder>;
     asks: PaginatedCollection<SRAOrder>;
-}
-
-export interface OrderbookPriceRequest {
-    page: number;
-    perPage: number;
-    graphUrl: string;
-    createdBy: string;
-    taker: string;
-    feeRecipient: string;
-    takerTokenFee: number;
-    threshold: number;
-    count: number;
 }
 
 export interface OrderConfigRequestPayload {
