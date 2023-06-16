@@ -1,6 +1,6 @@
 import * as _ from 'lodash';
 
-import { Address } from '../../types';
+import { Address } from '../types';
 
 export class TokenAdjacencyGraph {
     private readonly _graph: Map<Address, Address[]>;
@@ -30,6 +30,7 @@ export class TokenAdjacencyGraph {
     }
 }
 
+// tslint:disable-next-line: max-classes-per-file
 export class TokenAdjacencyGraphBuilder {
     private readonly _graph: Map<Address, Address[]>;
     private readonly _defaultTokens: readonly Address[];
@@ -51,8 +52,6 @@ export class TokenAdjacencyGraphBuilder {
             this._graph.set(fromLower, [...this._defaultTokens]);
         }
 
-        // `fromLower` must present
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const toTokens = this._graph.get(fromLower)!;
         if (!toTokens.includes(toLower)) {
             toTokens.push(toLower);

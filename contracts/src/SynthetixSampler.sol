@@ -34,17 +34,32 @@ interface IExchanger {
         uint256 sourceAmount,
         bytes32 sourceCurrencyKey,
         bytes32 destinationCurrencyKey
-    ) external view returns (uint256 amountReceived, uint256 fee, uint256 exchangeFeeRate);
+    )
+        external
+        view
+        returns (
+            uint256 amountReceived,
+            uint256 fee,
+            uint256 exchangeFeeRate
+        );
 
     // Optimism
     function getAmountsForExchange(
         uint256 sourceAmount,
         bytes32 sourceCurrencyKey,
         bytes32 destinationCurrencyKey
-    ) external view returns (uint256 amountReceived, uint256 fee, uint256 exchangeFeeRate);
+    )
+        external
+        view
+        returns (
+            uint256 amountReceived,
+            uint256 fee,
+            uint256 exchangeFeeRate
+        );
 }
 
 contract SynthetixSampler {
+
     /// @dev Sample sell quotes from Synthetix Atomic Swap.
     /// @param takerTokenSymbol Symbol (currency key) of the taker token (what to sell).
     /// @param makerTokenSymbol Symbol (currency key) of the maker token (what to buy).
@@ -64,11 +79,18 @@ contract SynthetixSampler {
             return (synthetix, makerTokenAmounts);
         }
 
-        makerTokenAmounts[0] = exchange(readProxy, takerTokenAmounts[0], takerTokenSymbol, makerTokenSymbol);
+        makerTokenAmounts[0] = exchange(
+            readProxy,
+            takerTokenAmounts[0],
+            takerTokenSymbol,
+            makerTokenSymbol
+        );
 
         // Synthetix atomic swap has a fixed rate. Calculate the rest based on the first value (and save gas).
         for (uint256 i = 1; i < numSamples; i++) {
-            makerTokenAmounts[i] = (makerTokenAmounts[0] * takerTokenAmounts[i]) / takerTokenAmounts[0];
+            makerTokenAmounts[i] =
+                (makerTokenAmounts[0] * takerTokenAmounts[i]) /
+                takerTokenAmounts[0];
         }
     }
 
@@ -86,13 +108,20 @@ contract SynthetixSampler {
     ) public view returns (address synthetix, uint256[] memory takerTokenAmounts) {
         synthetix = getSynthetixAddress(readProxy);
         // Since Synthetix atomic have a fixed rate, we can pick any reasonablely size takerTokenAmount (fixed to 1 ether here) and calculate the rest.
-        uint256 amountReceivedForEther = exchange(readProxy, 1 ether, takerTokenSymbol, makerTokenSymbol);
+        uint256 amountReceivedForEther = exchange(
+            readProxy,
+            1 ether,
+            takerTokenSymbol,
+            makerTokenSymbol
+        );
 
         uint256 numSamples = makerTokenAmounts.length;
         takerTokenAmounts = new uint256[](numSamples);
 
         for (uint256 i = 0; i < numSamples; i++) {
-            takerTokenAmounts[i] = (1 ether * makerTokenAmounts[i]) / amountReceivedForEther;
+            takerTokenAmounts[i] =
+                (1 ether * makerTokenAmounts[i]) /
+                amountReceivedForEther;
         }
     }
 
@@ -123,11 +152,22 @@ contract SynthetixSampler {
         }
     }
 
-    function getSynthetixAddress(IReadProxyAddressResolver readProxy) private view returns (address) {
+    function getSynthetixAddress(IReadProxyAddressResolver readProxy)
+        private
+        view
+        returns (address)
+    {
         return IAddressResolver(readProxy.target()).getAddress("Synthetix");
     }
 
-    function getExchanger(IReadProxyAddressResolver readProxy) private view returns (IExchanger) {
-        return IExchanger(IAddressResolver(readProxy.target()).getAddress("Exchanger"));
+    function getExchanger(IReadProxyAddressResolver readProxy)
+        private
+        view
+        returns (IExchanger)
+    {
+        return
+            IExchanger(
+                IAddressResolver(readProxy.target()).getAddress("Exchanger")
+            );
     }
 }

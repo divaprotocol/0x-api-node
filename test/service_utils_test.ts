@@ -1,5 +1,6 @@
 import { expect, randomAddress } from '@0x/contracts-test-utils';
 import { BigNumber } from '@0x/utils';
+// tslint:disable-next-line:no-implicit-dependencies
 import 'mocha';
 
 import { AffiliateFeeType, ERC20BridgeSource } from '../src/asset-swapper';
@@ -12,6 +13,43 @@ import { randomSellQuote } from './utils/mocks';
 const SUITE_NAME = 'serviceUtils';
 
 describe(SUITE_NAME, () => {
+    describe('excludeProprietarySources', () => {
+        it('will exclude liquidity provider if an API key is not present or invalid', () => {
+            const tests = ['foo', undefined, 'lol'];
+            for (const test of tests) {
+                const result = serviceUtils.determineExcludedSources([ERC20BridgeSource.Balancer], test, ['bar']);
+                expect(result).to.eql([ERC20BridgeSource.Balancer, ERC20BridgeSource.LiquidityProvider]);
+            }
+        });
+
+        it('will not exclude liquidity if a special wildcard is present', () => {
+            const tests = ['foo', undefined, 'lol'];
+            for (const test of tests) {
+                const result = serviceUtils.determineExcludedSources([ERC20BridgeSource.Balancer], test, ['*']);
+                expect(result).to.eql([ERC20BridgeSource.Balancer]);
+            }
+        });
+
+        it('will not add a duplicate entry for LiquidityProvider if already present', () => {
+            const result = serviceUtils.determineExcludedSources([ERC20BridgeSource.LiquidityProvider], 'foo', ['bar']);
+            expect(result).to.eql([ERC20BridgeSource.LiquidityProvider]);
+        });
+
+        it('will not modify the existing excluded sources if a valid API key is present', () => {
+            const tests: [ERC20BridgeSource[], string][] = [
+                [[], 'bar'],
+                [[ERC20BridgeSource.Curve, ERC20BridgeSource.UniswapV2], 'bar'],
+                [[ERC20BridgeSource.LiquidityProvider, ERC20BridgeSource.UniswapV2], 'bar'],
+            ];
+            for (const test of tests) {
+                const [currentExcludedSources, apiKey] = test;
+                const newExcludedSources = serviceUtils.determineExcludedSources(currentExcludedSources, apiKey, [
+                    'bar',
+                ]);
+                expect(newExcludedSources).to.eql(currentExcludedSources);
+            }
+        });
+    });
     describe('attributeCallData', () => {
         it('it returns a reasonable ID and timestamp', () => {
             const fakeCallData = '0x0000000000000';
@@ -34,71 +72,6 @@ describe(SUITE_NAME, () => {
             expect(randomId).to.match(/[0-9A-Fa-f]{10}/);
         });
     });
-
-    // NOTES: the tests runs with Ganache chain id.
-    describe('convertToLiquiditySources', () => {
-        it('returns the correct liquidity sources for multiple single sources', () => {
-            const liquiditySources = serviceUtils.convertToLiquiditySources({
-                singleSource: {
-                    [ERC20BridgeSource.Native]: new BigNumber(0.5),
-                    [ERC20BridgeSource.UniswapV3]: new BigNumber(0.5),
-                },
-                multihop: [],
-            });
-
-            expect(liquiditySources).to.be.deep.eq([
-                {
-                    name: '0x',
-                    proportion: new BigNumber(0.5),
-                },
-                {
-                    name: ERC20BridgeSource.UniswapV3,
-                    proportion: new BigNumber(0.5),
-                },
-            ]);
-        });
-
-        it('returns the correct liquidity sources for a mix of a single source and multihop sources', () => {
-            const liquiditySources = serviceUtils.convertToLiquiditySources({
-                singleSource: {
-                    [ERC20BridgeSource.Native]: new BigNumber(0.2),
-                },
-                multihop: [
-                    {
-                        proportion: new BigNumber(0.3),
-                        intermediateToken: 'intermediate-token-a',
-                        hops: [ERC20BridgeSource.UniswapV2, ERC20BridgeSource.Curve],
-                    },
-
-                    {
-                        proportion: new BigNumber(0.4),
-                        intermediateToken: 'intermediate-token-b',
-                        hops: [ERC20BridgeSource.BalancerV2, ERC20BridgeSource.Curve],
-                    },
-                ],
-            });
-
-            expect(liquiditySources).to.be.deep.eq([
-                {
-                    name: '0x',
-                    proportion: new BigNumber(0.2),
-                },
-                {
-                    name: ERC20BridgeSource.MultiHop,
-                    proportion: new BigNumber(0.3),
-                    intermediateToken: 'intermediate-token-a',
-                    hops: [ERC20BridgeSource.UniswapV2, ERC20BridgeSource.Curve],
-                },
-
-                {
-                    name: ERC20BridgeSource.MultiHop,
-                    proportion: new BigNumber(0.4),
-                    intermediateToken: 'intermediate-token-b',
-                    hops: [ERC20BridgeSource.BalancerV2, ERC20BridgeSource.Curve],
-                },
-            ]);
-        });
-    });
     describe('getAffiliateFeeAmounts', () => {
         it('returns the correct amounts if the fee is zero', () => {
             const affiliateFee = {
@@ -107,7 +80,7 @@ describe(SUITE_NAME, () => {
                 buyTokenPercentageFee: 0,
                 sellTokenPercentageFee: 0,
             };
-            const costInfo = serviceUtils.getBuyTokenFeeAmounts(randomSellQuote, affiliateFee);
+            const costInfo = serviceUtils.getAffiliateFeeAmounts(randomSellQuote, affiliateFee);
             expect(costInfo).to.deep.equal({
                 buyTokenFeeAmount: ZERO,
                 sellTokenFeeAmount: ZERO,
@@ -121,7 +94,7 @@ describe(SUITE_NAME, () => {
                 buyTokenPercentageFee: 0.01,
                 sellTokenPercentageFee: 0,
             };
-            const costInfo = serviceUtils.getBuyTokenFeeAmounts(randomSellQuote, affiliateFee);
+            const costInfo = serviceUtils.getAffiliateFeeAmounts(randomSellQuote, affiliateFee);
             expect(costInfo).to.deep.equal({
                 buyTokenFeeAmount: randomSellQuote.worstCaseQuoteInfo.makerAmount
                     .times(affiliateFee.buyTokenPercentageFee)
@@ -139,28 +112,11 @@ describe(SUITE_NAME, () => {
             buyTokenPercentageFee: 0,
             sellTokenPercentageFee: 0,
         };
-        const costInfo = serviceUtils.getBuyTokenFeeAmounts(randomSellQuote, affiliateFee);
+        const costInfo = serviceUtils.getAffiliateFeeAmounts(randomSellQuote, affiliateFee);
         expect(costInfo).to.deep.equal({
             buyTokenFeeAmount: ZERO,
             sellTokenFeeAmount: ZERO,
             gasCost: POSITIVE_SLIPPAGE_FEE_TRANSFORMER_GAS,
-        });
-    });
-    it('returns the correct amounts if gasless', () => {
-        const affiliateFee = {
-            feeType: AffiliateFeeType.GaslessFee,
-            recipient: randomAddress(),
-            buyTokenPercentageFee: 0,
-            sellTokenPercentageFee: 0,
-        };
-        const costInfo = serviceUtils.getBuyTokenFeeAmounts(randomSellQuote, affiliateFee);
-        expect(costInfo).to.deep.equal({
-            buyTokenFeeAmount: randomSellQuote.gasPrice
-                .times(randomSellQuote.worstCaseQuoteInfo.gas)
-                .times(randomSellQuote.makerAmountPerEth)
-                .integerValue(BigNumber.ROUND_DOWN),
-            sellTokenFeeAmount: ZERO,
-            gasCost: AFFILIATE_FEE_TRANSFORMER_GAS,
         });
     });
 });

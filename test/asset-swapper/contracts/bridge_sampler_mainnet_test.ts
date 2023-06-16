@@ -5,7 +5,9 @@ import { BigNumber, providerUtils } from '@0x/utils';
 import { artifacts } from '../../artifacts';
 import { ERC20BridgeSamplerContract } from '../../wrappers';
 
-const VB = '0x6cc5f688a315f3dc28a7781717a9a798a59fda7b';
+export const VB = '0x6cc5f688a315f3dc28a7781717a9a798a59fda7b';
+
+// tslint:disable: custom-no-magic-numbers
 
 blockchainTests.skip('Mainnet Sampler Tests', (env) => {
     let testContract: ERC20BridgeSamplerContract;
@@ -17,7 +19,7 @@ blockchainTests.skip('Mainnet Sampler Tests', (env) => {
     };
     before(async () => {
         const provider = new Web3ProviderEngine();
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- TODO: fix me!
+        // tslint:disable-next-line:no-non-null-assertion
         provider.addProvider(new RPCSubprovider(process.env.RPC_URL!));
         providerUtils.startProviderEngine(provider);
         testContract = new ERC20BridgeSamplerContract(fakeSamplerAddress, provider, {

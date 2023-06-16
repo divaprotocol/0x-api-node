@@ -24,9 +24,13 @@ import "./interfaces/IMStable.sol";
 import "./ApproximateBuys.sol";
 import "./SamplerUtils.sol";
 
-contract MStableSampler is SamplerUtils, ApproximateBuys {
+
+contract MStableSampler is
+    SamplerUtils,
+    ApproximateBuys
+{
     /// @dev Default gas limit for mStable calls.
-    uint256 private constant DEFAULT_CALL_GAS = 800e3; // 800k
+    uint256 constant private DEFAULT_CALL_GAS = 800e3; // 800k
 
     /// @dev Sample sell quotes from the mStable contract
     /// @param router Address of the mStable contract
@@ -40,7 +44,11 @@ contract MStableSampler is SamplerUtils, ApproximateBuys {
         address takerToken,
         address makerToken,
         uint256[] memory takerTokenAmounts
-    ) public view returns (uint256[] memory makerTokenAmounts) {
+    )
+        public
+        view
+        returns (uint256[] memory makerTokenAmounts)
+    {
         _assertValidPair(makerToken, takerToken);
         // Initialize array of maker token amounts.
         uint256 numSamples = takerTokenAmounts.length;
@@ -48,8 +56,11 @@ contract MStableSampler is SamplerUtils, ApproximateBuys {
 
         for (uint256 i = 0; i < numSamples; i++) {
             try
-                IMStable(router).getSwapOutput{gas: DEFAULT_CALL_GAS}(takerToken, makerToken, takerTokenAmounts[i])
-            returns (uint256 amount) {
+                IMStable(router).getSwapOutput
+                    {gas: DEFAULT_CALL_GAS}
+                    (takerToken, makerToken, takerTokenAmounts[i])
+                returns (uint256 amount)
+            {
                 makerTokenAmounts[i] = amount;
                 // Break early if there are 0 amounts
                 if (makerTokenAmounts[i] == 0) {
@@ -74,28 +85,39 @@ contract MStableSampler is SamplerUtils, ApproximateBuys {
         address takerToken,
         address makerToken,
         uint256[] memory makerTokenAmounts
-    ) public view returns (uint256[] memory takerTokenAmounts) {
-        return
-            _sampleApproximateBuys(
-                ApproximateBuyQuoteOpts({
-                    makerTokenData: abi.encode(makerToken, router),
-                    takerTokenData: abi.encode(takerToken, router),
-                    getSellQuoteCallback: _sampleSellForApproximateBuyFromMStable
-                }),
-                makerTokenAmounts
-            );
+    )
+        public
+        view
+        returns (uint256[] memory takerTokenAmounts)
+    {
+        return _sampleApproximateBuys(
+            ApproximateBuyQuoteOpts({
+                makerTokenData: abi.encode(makerToken, router),
+                takerTokenData: abi.encode(takerToken, router),
+                getSellQuoteCallback: _sampleSellForApproximateBuyFromMStable
+            }),
+            makerTokenAmounts
+        );
     }
 
     function _sampleSellForApproximateBuyFromMStable(
         bytes memory takerTokenData,
         bytes memory makerTokenData,
         uint256 sellAmount
-    ) private view returns (uint256 buyAmount) {
-        (address takerToken, address router) = abi.decode(takerTokenData, (address, address));
-        address makerToken = abi.decode(makerTokenData, (address));
-        try this.sampleSellsFromMStable(router, takerToken, makerToken, _toSingleValueArray(sellAmount)) returns (
-            uint256[] memory amounts
-        ) {
+    )
+        private
+        view
+        returns (uint256 buyAmount)
+    {
+        (address takerToken, address router) =
+            abi.decode(takerTokenData, (address, address));
+        (address makerToken) =
+            abi.decode(makerTokenData, (address));
+        try
+            this.sampleSellsFromMStable
+                (router, takerToken, makerToken, _toSingleValueArray(sellAmount))
+            returns (uint256[] memory amounts)
+        {
             return amounts[0];
         } catch (bytes memory) {
             // Swallow failures, leaving all results as zero.

@@ -1,3 +1,6 @@
+// tslint:disable:no-empty
+// tslint:disable:max-file-line-count
+
 import { expect } from '@0x/contracts-test-utils';
 import { BigNumber } from '@0x/utils';
 
@@ -8,16 +11,15 @@ import {
     SignedNativeOrder,
     V4RFQIndicativeQuote,
 } from '../../src/asset-swapper';
-import { SignedRfqOrder } from '../../src/asset-swapper/types';
 import { ONE_SECOND_MS } from '../../src/asset-swapper/utils/market_operation_utils/constants';
-import { ONE_MINUTE_MS, ZERO } from '../../src/constants';
+import { ONE_MINUTE_MS, RFQM_MINIMUM_EXPIRY_DURATION_MS, ZERO } from '../../src/constants';
 import { getBestQuote } from '../../src/utils/quote_comparison_utils';
 
-const NEVER_EXPIRES = new BigNumber('9999999999999999');
+const NEVER_EXPIRES = new BigNumber(9999999999999999);
 
-function createBaseOrder(): SignedRfqOrder {
+function createBaseOrder(): SignedNativeOrder {
     return {
-        type: FillQuoteTransformerOrderType.Rfq,
+        type: FillQuoteTransformerOrderType.Limit,
         order: {
             ...new RfqOrder({
                 makerAmount: ZERO,
@@ -37,7 +39,7 @@ describe('getBestQuote', () => {
     const makerToken = 'DAI';
     const takerToken = 'SUSD';
     const assetFillAmount = new BigNumber(100);
-    const validityWindowMs = ONE_MINUTE_MS;
+    const validityWindowMs = RFQM_MINIMUM_EXPIRY_DURATION_MS;
     const inOneMinute = new BigNumber((Date.now() + ONE_MINUTE_MS) / ONE_SECOND_MS);
 
     describe('IndicativeQuotes when selling', () => {

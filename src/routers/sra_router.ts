@@ -2,9 +2,10 @@ import * as express from 'express';
 import * as asyncHandler from 'express-async-handler';
 
 import { SRAHandlers } from '../handlers/sra_handlers';
-import { IOrderBookService } from '../types';
+import { OrderBookService } from '../services/orderbook_service';
 
-export function createSRARouter(orderBook: IOrderBookService): express.Router {
+// tslint:disable-next-line:completed-docs
+export function createSRARouter(orderBook: OrderBookService): express.Router {
     const router = express.Router();
     const handlers = new SRAHandlers(orderBook);
     // Link to docs in the root.

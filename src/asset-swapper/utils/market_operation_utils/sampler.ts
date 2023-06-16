@@ -7,12 +7,12 @@ import { TokenAdjacencyGraph } from '../token_adjacency_graph';
 
 import { BancorService } from './bancor_service';
 import { PoolsCacheMap, SamplerOperations } from './sampler_operations';
-import { BatchedOperation } from './types';
+import { BatchedOperation, LiquidityProviderRegistry } from './types';
 
 /**
  * Generate sample amounts up to `maxFillAmount`.
  */
-export function getSampleAmounts(maxFillAmount: BigNumber, numSamples: number, expBase = 1): BigNumber[] {
+export function getSampleAmounts(maxFillAmount: BigNumber, numSamples: number, expBase: number = 1): BigNumber[] {
     const distribution = [...Array<BigNumber>(numSamples)].map((_v, i) => new BigNumber(expBase).pow(i));
     const distributionSum = BigNumber.sum(...distribution);
     const stepSizes = distribution.map((d) => d.div(distributionSum));
@@ -39,9 +39,10 @@ export class DexOrderSampler extends SamplerOperations {
         private readonly _samplerOverrides?: SamplerOverrides,
         poolsCaches?: PoolsCacheMap,
         tokenAdjacencyGraph?: TokenAdjacencyGraph,
+        liquidityProviderRegistry?: LiquidityProviderRegistry,
         bancorServiceFn: () => Promise<BancorService | undefined> = async () => undefined,
     ) {
-        super(chainId, _samplerContract, poolsCaches, tokenAdjacencyGraph, bancorServiceFn);
+        super(chainId, _samplerContract, poolsCaches, tokenAdjacencyGraph, liquidityProviderRegistry, bancorServiceFn);
     }
 
     /* Type overloads for `executeAsync()`. Could skip this if we would upgrade TS. */
@@ -164,7 +165,6 @@ export class DexOrderSampler extends SamplerOperations {
     /**
      * Run a series of operations from `DexOrderSampler.ops` in a single transaction.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public async executeAsync(...ops: any[]): Promise<any[]> {
         return this.executeBatchAsync(ops);
     }
@@ -173,7 +173,6 @@ export class DexOrderSampler extends SamplerOperations {
      * Run a series of operations from `DexOrderSampler.ops` in a single transaction.
      * Takes an arbitrary length array, but is not typesafe.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public async executeBatchAsync<T extends BatchedOperation<any>[]>(ops: T): Promise<any[]> {
         const callDatas = ops.map((o) => o.encodeCall());
         const { overrides, block } = this._samplerOverrides
@@ -191,6 +190,7 @@ export class DexOrderSampler extends SamplerOperations {
         // Return the parsed results.
         let rawCallResultsIdx = 0;
         return callDatas.map((callData, i) => {
+            // tslint:disable-next-line:boolean-naming
             const { data, success } =
                 callData !== NULL_BYTES ? rawCallResults[rawCallResultsIdx++] : { success: true, data: NULL_BYTES };
             return success ? ops[i].handleCallResults(data) : ops[i].handleRevert(data);

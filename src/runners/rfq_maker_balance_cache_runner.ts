@@ -11,7 +11,7 @@ import { artifacts } from '../artifacts';
 import { BalanceCheckerContract } from '../asset-swapper';
 import * as defaultConfig from '../config';
 import { METRICS_PATH, ONE_SECOND_MS, RFQ_ALLOWANCE_TARGET, RFQ_FIRM_QUOTE_CACHE_EXPIRY } from '../constants';
-import { getDBConnectionOrThrow } from '../db_connection';
+import { getDBConnectionAsync } from '../db_connection';
 import { MakerBalanceChainCacheEntity } from '../entities';
 import { logger } from '../logger';
 import { providerUtils } from '../utils/provider_utils';
@@ -77,7 +77,8 @@ if (require.main === module) {
         );
         const web3Wrapper = new Web3Wrapper(provider);
 
-        const connection = await getDBConnectionOrThrow();
+        const connection = await getDBConnectionAsync();
+
         const balanceCheckerContractInterface = getBalanceCheckerContractInterface(RANDOM_ADDRESS, provider);
 
         await runRfqBalanceCacheAsync(web3Wrapper, connection, balanceCheckerContractInterface);
@@ -110,7 +111,6 @@ async function runRfqBalanceCacheAsync(
 
     const workerId = _.uniqueId('rfqw_');
     let lastBlockSeen = -1;
-    // eslint-disable-next-line no-constant-condition
     while (true) {
         if (blockRequestErrors >= MAX_REQUEST_ERRORS) {
             throw new Error(`too many bad Web3 requests to fetch blocks (reached limit of ${MAX_REQUEST_ERRORS})`);
@@ -181,7 +181,6 @@ async function getMakerTokensAsync(connection: Connection, workerId: string): Pr
     const start = new Date().getTime();
 
     if (!MAKER_TOKEN_CACHE) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
         MAKER_TOKEN_CACHE = createResultCache<any[]>(
             () =>
                 connection
@@ -205,9 +204,7 @@ function splitValues(makerTokens: MakerBalanceChainCacheEntity[]): BalancesCallI
 
     return makerTokens.reduce(({ addresses, tokens }, makerToken) => {
         return {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- TODO: fix me!
             addresses: addresses.concat(makerToken.makerAddress!),
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- TODO: fix me!
             tokens: tokens.concat(makerToken.tokenAddress!),
         };
     }, functionInputs);
@@ -247,18 +244,14 @@ async function getErc20BalancesAsync(
                   }
                 : {};
 
-            return (
-                balanceCheckerContractInterface
-                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- TODO: fix me!
-                    .getMinOfBalancesOrAllowances(addressesChunk!, tokensChunk!, RFQ_ALLOWANCE_TARGET)
-                    .callAsync(txOpts, BlockParamLiteral.Latest)
-            );
+            return balanceCheckerContractInterface
+                .getMinOfBalancesOrAllowances(addressesChunk!, tokensChunk!, RFQ_ALLOWANCE_TARGET)
+                .callAsync(txOpts, BlockParamLiteral.Latest);
         }),
     );
 
     const balancesFlattened = Array.prototype.concat.apply([], balances);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
     return balancesFlattened.map((bal: any) => bal.toString());
 }
 

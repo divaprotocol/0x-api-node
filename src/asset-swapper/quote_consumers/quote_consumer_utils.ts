@@ -1,41 +1,26 @@
-import { ContractAddresses } from '@0x/contract-addresses';
-import { IZeroExContract } from '@0x/contract-wrappers';
-import { FillQuoteTransformerData, FillQuoteTransformerOrderType, findTransformerNonce } from '@0x/protocol-utils';
+import { FillQuoteTransformerData, FillQuoteTransformerOrderType } from '@0x/protocol-utils';
 
-import {
-    ExchangeProxyContractOpts,
-    MarketBuySwapQuote,
-    MarketOperation,
-    SwapQuote,
-    ERC20BridgeSource,
-    OptimizedMarketBridgeOrder,
-    OptimizedOrder,
-    OptimizedOtcOrder,
-    OptimizedRfqOrder,
-    OptimizedLimitOrder,
-    IPath,
-} from '../types';
+import { ExchangeProxyContractOpts, MarketBuySwapQuote, MarketOperation, SwapQuote } from '../types';
 import {
     createBridgeDataForBridgeOrder,
     getErc20BridgeSourceToBridgeSource,
 } from '../utils/market_operation_utils/orders';
-import { TransformerNonces } from './types';
+import {
+    ERC20BridgeSource,
+    NativeLimitOrderFillData,
+    NativeRfqOrderFillData,
+    OptimizedMarketBridgeOrder,
+    OptimizedMarketOrder,
+    OptimizedMarketOrderBase,
+} from '../utils/market_operation_utils/types';
 
 const MULTIPLEX_BATCH_FILL_SOURCES = [
     ERC20BridgeSource.UniswapV2,
     ERC20BridgeSource.SushiSwap,
+    ERC20BridgeSource.LiquidityProvider,
     ERC20BridgeSource.Native,
     ERC20BridgeSource.UniswapV3,
 ];
-
-export function createExchangeProxyWithoutProvider(exchangeProxyAddress: string): IZeroExContract {
-    const fakeProvider = {
-        sendAsync(): void {
-            return;
-        },
-    };
-    return new IZeroExContract(exchangeProxyAddress, fakeProvider);
-}
 
 /**
  * Returns true iff a quote can be filled via `MultiplexFeature.batchFill`.
@@ -44,49 +29,36 @@ export function isMultiplexBatchFillCompatible(quote: SwapQuote, opts: ExchangeP
     if (requiresTransformERC20(opts)) {
         return false;
     }
-    if (quote.path.hasTwoHop()) {
+    if (quote.isTwoHop) {
         return false;
     }
-    if (
-        quote.path
-            .getOrders()
-            .map((o) => o.type)
-            .includes(FillQuoteTransformerOrderType.Limit)
-    ) {
+    if (quote.orders.map((o) => o.type).includes(FillQuoteTransformerOrderType.Limit)) {
         return false;
     }
     // Use Multiplex if the non-fallback sources are a subset of
     // {UniswapV2, Sushiswap, RFQ, PLP, UniswapV3}
-    const nonFallbackSources = quote.path.getOrders().map((o) => o.source);
+    const nonFallbackSources = Object.keys(quote.sourceBreakdown);
     return nonFallbackSources.every((source) => MULTIPLEX_BATCH_FILL_SOURCES.includes(source as ERC20BridgeSource));
 }
 
 const MULTIPLEX_MULTIHOP_FILL_SOURCES = [
     ERC20BridgeSource.UniswapV2,
     ERC20BridgeSource.SushiSwap,
+    ERC20BridgeSource.LiquidityProvider,
     ERC20BridgeSource.UniswapV3,
 ];
 
 /**
- * Returns true if a path can be filled via `MultiplexFeature.multiplexMultiHop*`.
+ * Returns true iff a quote can be filled via `MultiplexFeature.multiHopFill`.
  */
-export function isMultiplexMultiHopFillCompatible(path: IPath, opts: ExchangeProxyContractOpts): boolean {
+export function isMultiplexMultiHopFillCompatible(quote: SwapQuote, opts: ExchangeProxyContractOpts): boolean {
     if (requiresTransformERC20(opts)) {
         return false;
     }
-    const { bridgeOrders, nativeOrders, twoHopOrders } = path.getOrdersByType();
-
-    // Path shouldn't have any other type of order.
-    if (bridgeOrders.length !== 0 || nativeOrders.length !== 0) {
+    if (!quote.isTwoHop) {
         return false;
     }
-
-    // MultiplexFeature only supports single two hop order.
-    if (twoHopOrders.length !== 1) {
-        return false;
-    }
-
-    const { firstHopOrder, secondHopOrder } = twoHopOrders[0];
+    const [firstHopOrder, secondHopOrder] = quote.orders;
     return (
         MULTIPLEX_MULTIHOP_FILL_SOURCES.includes(firstHopOrder.source) &&
         MULTIPLEX_MULTIHOP_FILL_SOURCES.includes(secondHopOrder.source)
@@ -98,48 +70,41 @@ export function isMultiplexMultiHopFillCompatible(path: IPath, opts: ExchangePro
  */
 
 export function isDirectSwapCompatible(
-    path: IPath,
+    quote: SwapQuote,
     opts: ExchangeProxyContractOpts,
     directSources: ERC20BridgeSource[],
 ): boolean {
     if (requiresTransformERC20(opts)) {
         return false;
     }
-
-    const orders = path.getOrders();
     // Must be a single order.
-    if (orders.length !== 1) {
+    if (quote.orders.length !== 1) {
         return false;
     }
-    const order = orders[0];
+    const order = quote.orders[0];
     if (!directSources.includes(order.source)) {
         return false;
     }
     return true;
 }
 
-export function getMaxQuoteSlippageRate(quote: SwapQuote): number {
-    return quote.worstCaseQuoteInfo.slippage;
-}
-
+/**
+ * Whether a quote is a market buy or not.
+ */
 export function isBuyQuote(quote: SwapQuote): quote is MarketBuySwapQuote {
     return quote.type === MarketOperation.Buy;
 }
 
-function isOptimizedBridgeOrder(x: OptimizedOrder): x is OptimizedMarketBridgeOrder {
+function isOptimizedBridgeOrder(x: OptimizedMarketOrder): x is OptimizedMarketBridgeOrder {
     return x.type === FillQuoteTransformerOrderType.Bridge;
 }
 
-function isOptimizedLimitOrder(x: OptimizedOrder): x is OptimizedLimitOrder {
+function isOptimizedLimitOrder(x: OptimizedMarketOrder): x is OptimizedMarketOrderBase<NativeLimitOrderFillData> {
     return x.type === FillQuoteTransformerOrderType.Limit;
 }
 
-function isOptimizedRfqOrder(x: OptimizedOrder): x is OptimizedRfqOrder {
+function isOptimizedRfqOrder(x: OptimizedMarketOrder): x is OptimizedMarketOrderBase<NativeRfqOrderFillData> {
     return x.type === FillQuoteTransformerOrderType.Rfq;
-}
-
-function isOptimizedOtcOrder(x: OptimizedOrder): x is OptimizedOtcOrder {
-    return x.type === FillQuoteTransformerOrderType.Otc;
 }
 
 /**
@@ -147,16 +112,12 @@ function isOptimizedOtcOrder(x: OptimizedOrder): x is OptimizedOtcOrder {
  * FillQuoteTransformer.
  */
 export function getFQTTransformerDataFromOptimizedOrders(
-    orders: OptimizedOrder[],
-): Pick<FillQuoteTransformerData, 'bridgeOrders' | 'limitOrders' | 'rfqOrders' | 'otcOrders' | 'fillSequence'> {
-    const fqtData: Pick<
-        FillQuoteTransformerData,
-        'bridgeOrders' | 'limitOrders' | 'rfqOrders' | 'otcOrders' | 'fillSequence'
-    > = {
+    orders: OptimizedMarketOrder[],
+): Pick<FillQuoteTransformerData, 'bridgeOrders' | 'limitOrders' | 'rfqOrders' | 'fillSequence'> {
+    const fqtData: Pick<FillQuoteTransformerData, 'bridgeOrders' | 'limitOrders' | 'rfqOrders' | 'fillSequence'> = {
         bridgeOrders: [],
         limitOrders: [],
         rfqOrders: [],
-        otcOrders: [],
         fillSequence: [],
     };
 
@@ -180,12 +141,6 @@ export function getFQTTransformerDataFromOptimizedOrders(
                 signature: order.fillData.signature,
                 maxTakerTokenFillAmount: order.takerAmount,
             });
-        } else if (isOptimizedOtcOrder(order)) {
-            fqtData.otcOrders.push({
-                order: order.fillData.order,
-                signature: order.fillData.signature,
-                maxTakerTokenFillAmount: order.takerAmount,
-            });
         } else {
             // Should never happen
             throw new Error('Unknown Order type');
@@ -196,47 +151,20 @@ export function getFQTTransformerDataFromOptimizedOrders(
 }
 
 /**
- * Returns true if swap quote must go through `transformERC20`.
+ * Returns true if swap quote must go through `tranformERC20`.
  */
 export function requiresTransformERC20(opts: ExchangeProxyContractOpts): boolean {
     // Is a mtx.
-    if (opts.metaTransactionVersion !== undefined) {
+    if (opts.isMetaTransaction) {
         return true;
     }
     // Has an affiliate fee.
-    const affiliateFees = [...opts.sellTokenAffiliateFees, ...opts.buyTokenAffiliateFees];
-    if (affiliateFees.some((f) => f.buyTokenFeeAmount.gt(0) || f.sellTokenFeeAmount.gt(0))) {
+    if (!opts.affiliateFee.buyTokenFeeAmount.eq(0) || !opts.affiliateFee.sellTokenFeeAmount.eq(0)) {
         return true;
     }
-
     // VIP does not support selling the entire balance
     if (opts.shouldSellEntireBalance) {
         return true;
     }
     return false;
-}
-
-export function getTransformerNonces(contractAddresses: ContractAddresses): TransformerNonces {
-    return {
-        wethTransformer: findTransformerNonce(
-            contractAddresses.transformers.wethTransformer,
-            contractAddresses.exchangeProxyTransformerDeployer,
-        ),
-        payTakerTransformer: findTransformerNonce(
-            contractAddresses.transformers.payTakerTransformer,
-            contractAddresses.exchangeProxyTransformerDeployer,
-        ),
-        fillQuoteTransformer: findTransformerNonce(
-            contractAddresses.transformers.fillQuoteTransformer,
-            contractAddresses.exchangeProxyTransformerDeployer,
-        ),
-        affiliateFeeTransformer: findTransformerNonce(
-            contractAddresses.transformers.affiliateFeeTransformer,
-            contractAddresses.exchangeProxyTransformerDeployer,
-        ),
-        positiveSlippageFeeTransformer: findTransformerNonce(
-            contractAddresses.transformers.positiveSlippageFeeTransformer,
-            contractAddresses.exchangeProxyTransformerDeployer,
-        ),
-    };
 }

@@ -3,14 +3,14 @@ import { FillQuoteTransformerOrderType, SignatureType } from '@0x/protocol-utils
 import { BigNumber, hexUtils, NULL_BYTES } from '@0x/utils';
 import * as _ from 'lodash';
 
+import { MarketOperation } from '../../src/asset-swapper/types';
 import {
-    MarketOperation,
     ERC20BridgeSource,
     Fill,
-    OptimizedOrder,
-    GasSchedule,
-    OptimizedLimitOrder,
-} from '../../src/asset-swapper/types';
+    NativeLimitOrderFillData,
+    OptimizedMarketOrder,
+    OptimizedMarketOrderBase,
+} from '../../src/asset-swapper/utils/market_operation_utils/types';
 import {
     fillQuoteOrders,
     QuoteFillOrderCall,
@@ -18,16 +18,15 @@ import {
     simulateWorstCaseFill,
 } from '../../src/asset-swapper/utils/quote_simulation';
 
+// tslint:disable: custom-no-magic-numbers
+
 describe('quote_simulation tests', async () => {
     const { NULL_ADDRESS } = constants;
     const ZERO = new BigNumber(0);
     const ONE = new BigNumber(1);
     const MAKER_TOKEN = randomAddress();
     const TAKER_TOKEN = randomAddress();
-    const GAS_SCHEDULE: GasSchedule = (() => {
-        const sources = Object.values(ERC20BridgeSource);
-        return _.zipObject(sources, new Array(sources.length).fill(_.constant(1))) as GasSchedule;
-    })();
+    const GAS_SCHEDULE = { [ERC20BridgeSource.Uniswap]: _.constant(1), [ERC20BridgeSource.Native]: _.constant(1) };
 
     // Check if two numbers are within `maxError` error rate within each other.
     function assertRoughlyEquals(n1: BigNumber, n2: BigNumber, maxError: BigNumber | number = 1e-10): void {
@@ -102,7 +101,7 @@ describe('quote_simulation tests', async () => {
             takerOutputFee: BigNumber;
             type: FillQuoteTransformerOrderType;
         }> = {},
-    ): OptimizedOrder {
+    ): OptimizedMarketOrderBase<NativeLimitOrderFillData> {
         const { filledInput, side, takerInputFee, takerOutputFee, type } = _.merge(
             {},
             {
@@ -123,74 +122,36 @@ describe('quote_simulation tests', async () => {
         const fillableTakerAmount = side === MarketOperation.Sell ? fillableInput : fillableOutput;
         const takerFee = BigNumber.max(takerInputFee, takerOutputFee);
 
-        switch (type) {
-            case FillQuoteTransformerOrderType.Bridge:
-                throw new Error('unimplemented');
-            case FillQuoteTransformerOrderType.Limit:
-                return {
-                    source: ERC20BridgeSource.Native,
+        const order: OptimizedMarketOrderBase<NativeLimitOrderFillData> = {
+            source: ERC20BridgeSource.Native,
+            makerToken: MAKER_TOKEN,
+            takerToken: TAKER_TOKEN,
+            makerAmount: fillableMakerAmount,
+            takerAmount: fillableTakerAmount,
+            fillData: {
+                order: {
                     makerToken: MAKER_TOKEN,
+                    makerAmount,
                     takerToken: TAKER_TOKEN,
-                    makerAmount: fillableMakerAmount,
-                    takerAmount: fillableTakerAmount,
-                    fillData: {
-                        order: {
-                            makerToken: MAKER_TOKEN,
-                            makerAmount,
-                            takerToken: TAKER_TOKEN,
-                            takerAmount,
-                            maker: NULL_ADDRESS,
-                            taker: NULL_ADDRESS,
-                            sender: NULL_ADDRESS,
-                            salt: ZERO,
-                            chainId: 1,
-                            pool: NULL_BYTES,
-                            verifyingContract: NULL_ADDRESS,
-                            expiry: ZERO,
-                            feeRecipient: NULL_ADDRESS,
-                            takerTokenFeeAmount: takerFee,
-                        },
-                        signature: { v: 1, r: NULL_BYTES, s: NULL_BYTES, signatureType: SignatureType.EthSign },
-                        maxTakerTokenFillAmount: fillableTakerAmount,
-                    },
-                    type,
-                    fill: createOrderFill(fillableInput, fillableOutput),
-                };
-            case FillQuoteTransformerOrderType.Rfq:
-                return {
-                    source: ERC20BridgeSource.Native,
-                    makerToken: MAKER_TOKEN,
-                    takerToken: TAKER_TOKEN,
-                    makerAmount: fillableMakerAmount,
-                    takerAmount: fillableTakerAmount,
-                    fillData: {
-                        order: {
-                            makerToken: MAKER_TOKEN,
-                            makerAmount,
-                            takerToken: TAKER_TOKEN,
-                            takerAmount,
-                            maker: NULL_ADDRESS,
-                            taker: NULL_ADDRESS,
-                            txOrigin: NULL_ADDRESS,
-                            salt: ZERO,
-                            chainId: 1,
-                            pool: NULL_BYTES,
-                            verifyingContract: NULL_ADDRESS,
-                            expiry: ZERO,
-                        },
-                        signature: { v: 1, r: NULL_BYTES, s: NULL_BYTES, signatureType: SignatureType.EthSign },
-                        maxTakerTokenFillAmount: fillableTakerAmount,
-                    },
-                    type,
-                    fill: createOrderFill(fillableInput, fillableOutput),
-                };
-            case FillQuoteTransformerOrderType.Otc:
-                throw new Error('unimplemented');
-            default:
-                ((_: never) => {
-                    throw new Error('unreachable');
-                })(type);
-        }
+                    takerAmount,
+                    maker: NULL_ADDRESS,
+                    taker: NULL_ADDRESS,
+                    sender: NULL_ADDRESS,
+                    salt: ZERO,
+                    chainId: 1,
+                    pool: NULL_BYTES,
+                    verifyingContract: NULL_ADDRESS,
+                    expiry: ZERO,
+                    feeRecipient: NULL_ADDRESS,
+                    takerTokenFeeAmount: takerFee,
+                },
+                signature: { v: 1, r: NULL_BYTES, s: NULL_BYTES, signatureType: SignatureType.EthSign },
+                maxTakerTokenFillAmount: fillableTakerAmount,
+            },
+            type,
+            fill: createOrderFill(fillableInput, fillableOutput),
+        };
+        return order;
     }
     const nativeSourcePathId = hexUtils.random();
     function createOrderFill(input: BigNumber, output: BigNumber): Fill {
@@ -661,11 +622,15 @@ describe('quote_simulation tests', async () => {
         });
     });
 
-    function slipOrder(order: OptimizedLimitOrder, orderSlippage: number, side: MarketOperation): OptimizedLimitOrder {
+    function slipOrder(
+        order: OptimizedMarketOrderBase<NativeLimitOrderFillData>,
+        orderSlippage: number,
+        side: MarketOperation,
+    ): OptimizedMarketOrder {
         const makerScaling = side === MarketOperation.Sell ? 1 - orderSlippage : 1;
         const takerScaling = side === MarketOperation.Sell ? 1 : orderSlippage + 1;
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- TODO: fix me!
+        // tslint:disable:next-line no-unnecessary-type-assertion
         const nativeFillData = order.fillData!;
         const slippedFillData = {
             order: {
@@ -695,7 +660,9 @@ describe('quote_simulation tests', async () => {
                 fillableOutput,
                 side,
             });
-            const orders = fillOrders.map((fo) => slipOrder(fo.order as OptimizedLimitOrder, orderSlippage, side));
+            const orders = fillOrders.map((fo) =>
+                slipOrder(fo.order as OptimizedMarketOrderBase<NativeLimitOrderFillData>, orderSlippage, side),
+            );
             const result = simulateBestCaseFill({
                 orders,
                 side,
@@ -928,7 +895,9 @@ describe('quote_simulation tests', async () => {
                 fillableInput,
                 fillableOutput,
                 side,
-            }).map((fo) => slipOrder(fo.order as OptimizedLimitOrder, orderSlippage, side));
+            }).map((fo) =>
+                slipOrder(fo.order as OptimizedMarketOrderBase<NativeLimitOrderFillData>, orderSlippage, side),
+            );
             orders = [...orders.slice(1), orders[0]];
             const bestCase = simulateBestCaseFill({
                 orders,
@@ -949,4 +918,4 @@ describe('quote_simulation tests', async () => {
             expect(worstPrice).to.be.bignumber.lt(bestPrice);
         });
     });
-});
+}); // tslint:disable: max-file-line-count

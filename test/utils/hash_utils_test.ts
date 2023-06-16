@@ -1,3 +1,5 @@
+// tslint:disable: boolean-naming
+
 import { expect } from '@0x/contracts-test-utils';
 
 import { isHashSmallEnough } from '../../src/utils/hash_utils';

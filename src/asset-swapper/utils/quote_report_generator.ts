@@ -2,36 +2,99 @@ import { FillQuoteTransformerOrderType, RfqOrderFields, Signature } from '@0x/pr
 import { BigNumber } from '@0x/utils';
 import _ = require('lodash');
 
+import { MarketOperation, NativeOrderWithFillableAmounts } from '../types';
+
 import {
-    MarketOperation,
-    NativeOrderWithFillableAmounts,
+    DexSample,
     ERC20BridgeSource,
     Fill,
+    FillData,
+    MultiHopFillData,
     NativeFillData,
-    ExtendedQuoteReportIndexedEntry,
-    BridgeQuoteReportEntry,
-    MultiHopQuoteReportEntry,
-    NativeLimitOrderQuoteReportEntry,
-    NativeRfqOrderQuoteReportEntry,
-    ExtendedQuoteReportSources,
-    ExtendedQuoteReportEntry,
-    IndicativeRfqOrderQuoteReportEntry,
-    QuoteReport,
-} from '../types';
-
-import { DexSample, MultiHopFillData, RawQuotes } from './market_operation_utils/types';
+    NativeLimitOrderFillData,
+    NativeRfqOrderFillData,
+    RawQuotes,
+} from './market_operation_utils/types';
 import { QuoteRequestor, V4RFQIndicativeQuoteMM } from './quote_requestor';
 
-type ExtendedQuoteReportIndexedEntryOutbound = Omit<ExtendedQuoteReportIndexedEntry, 'fillData'> & {
+export interface QuoteReportEntryBase {
+    liquiditySource: ERC20BridgeSource;
+    makerAmount: BigNumber;
+    takerAmount: BigNumber;
+    fillData: FillData;
+}
+export interface BridgeQuoteReportEntry extends QuoteReportEntryBase {
+    liquiditySource: Exclude<ERC20BridgeSource, ERC20BridgeSource.Native>;
+}
+
+export interface MultiHopQuoteReportEntry extends QuoteReportEntryBase {
+    liquiditySource: ERC20BridgeSource.MultiHop;
+    hopSources: ERC20BridgeSource[];
+}
+
+export interface NativeLimitOrderQuoteReportEntry extends QuoteReportEntryBase {
+    liquiditySource: ERC20BridgeSource.Native;
+    fillData: NativeFillData;
+    fillableTakerAmount: BigNumber;
+    isRFQ: false;
+}
+
+export interface NativeRfqOrderQuoteReportEntry extends QuoteReportEntryBase {
+    liquiditySource: ERC20BridgeSource.Native;
+    fillData: NativeFillData;
+    fillableTakerAmount: BigNumber;
+    isRFQ: true;
+    nativeOrder: RfqOrderFields;
+    makerUri: string;
+    comparisonPrice?: number;
+}
+
+export interface IndicativeRfqOrderQuoteReportEntry extends QuoteReportEntryBase {
+    liquiditySource: ERC20BridgeSource.Native;
+    fillableTakerAmount: BigNumber;
+    isRFQ: true;
+    makerUri?: string;
+    comparisonPrice?: number;
+}
+
+export type QuoteReportEntry =
+    | BridgeQuoteReportEntry
+    | MultiHopQuoteReportEntry
+    | NativeLimitOrderQuoteReportEntry
+    | NativeRfqOrderQuoteReportEntry;
+
+export type ExtendedQuoteReportEntry =
+    | BridgeQuoteReportEntry
+    | MultiHopQuoteReportEntry
+    | NativeLimitOrderQuoteReportEntry
+    | NativeRfqOrderQuoteReportEntry
+    | IndicativeRfqOrderQuoteReportEntry;
+
+export type ExtendedQuoteReportIndexedEntry = ExtendedQuoteReportEntry & {
+    quoteEntryIndex: number;
+    isDelivered: boolean;
+};
+
+export type ExtendedQuoteReportIndexedEntryOutbound = Omit<ExtendedQuoteReportIndexedEntry, 'fillData'> & {
     fillData?: string;
 };
+
+export interface QuoteReport {
+    sourcesConsidered: QuoteReportEntry[];
+    sourcesDelivered: QuoteReportEntry[];
+}
+
+export interface ExtendedQuoteReportSources {
+    sourcesConsidered: ExtendedQuoteReportIndexedEntry[];
+    sourcesDelivered: ExtendedQuoteReportIndexedEntry[] | undefined;
+}
 
 export interface ExtendedQuoteReport {
     quoteId?: string;
     taker?: string;
     timestamp: number;
     firmQuoteReport: boolean;
-    submissionBy: 'taker' | 'gaslessSwapAmm' | 'rfqm';
+    submissionBy: 'taker' | 'metaTxn' | 'rfqm';
     buyAmount?: string;
     sellAmount?: string;
     buyTokenAddress: string;
@@ -44,10 +107,12 @@ export interface ExtendedQuoteReport {
     sourcesDelivered: ExtendedQuoteReportIndexedEntryOutbound[] | undefined;
     blockNumber: number | undefined;
     estimatedGas: string;
-    enableSlippageProtection?: boolean;
-    expectedSlippage?: string;
-    estimatedPriceImpact?: string;
-    priceImpactProtectionPercentage: number;
+}
+
+export interface PriceComparisonsReport {
+    dexSources: BridgeQuoteReportEntry[];
+    multiHopSources: MultiHopQuoteReportEntry[];
+    nativeSources: (NativeLimitOrderQuoteReportEntry | NativeRfqOrderQuoteReportEntry)[];
 }
 
 /**
@@ -62,7 +127,6 @@ export function generateQuoteReport(
     quoteRequestor?: QuoteRequestor,
 ): QuoteReport {
     const nativeOrderSourcesConsidered = nativeOrders.map((order) =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
         nativeOrderToReportEntry(order.type, order as any, order.fillableTakerAmount, comparisonPrice, quoteRequestor),
     );
     const sourcesConsidered = [...nativeOrderSourcesConsidered.filter((order) => order.isRFQ)];
@@ -91,6 +155,7 @@ export function generateQuoteReport(
         });
     } else {
         sourcesDelivered = [
+            // tslint:disable-next-line: no-unnecessary-type-assertion
             multiHopSampleToReportSource(liquidityDelivered as DexSample<MultiHopFillData>, marketOperation),
         ];
     }
@@ -120,7 +185,6 @@ export function generateExtendedQuoteReportSources(
         ...quotes.nativeOrders.map((order) =>
             nativeOrderToReportEntry(
                 order.type,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
                 order as any,
                 order.fillableTakerAmount,
                 comparisonPrice,
@@ -135,11 +199,7 @@ export function generateExtendedQuoteReportSources(
     );
 
     // MultiHop
-    sourcesConsidered.push(
-        ..._.flatMap(quotes.twoHopQuotes, (samples) => {
-            return samples.map((sample) => multiHopSampleToReportSource(sample, marketOperation));
-        }),
-    );
+    sourcesConsidered.push(...quotes.twoHopQuotes.map((quote) => multiHopSampleToReportSource(quote, marketOperation)));
 
     // Dex Quotes
     sourcesConsidered.push(
@@ -182,6 +242,7 @@ export function generateExtendedQuoteReportSources(
         });
     } else {
         sourcesDelivered = [
+            // tslint:disable-next-line: no-unnecessary-type-assertion
             multiHopSampleToReportSource(liquidityDelivered as DexSample<MultiHopFillData>, marketOperation),
         ];
     }
@@ -206,9 +267,9 @@ function _nativeDataToId(data: { signature: Signature }): string {
 
 /**
  * Generates a report sample for a DEX source
- * NOTE: this is used for the QuoteReport.
+ * NOTE: this is used for the QuoteReport and quote price comparison data
  */
-function dexSampleToReportSource(ds: DexSample, marketOperation: MarketOperation): BridgeQuoteReportEntry {
+export function dexSampleToReportSource(ds: DexSample, marketOperation: MarketOperation): BridgeQuoteReportEntry {
     const liquiditySource = ds.source;
 
     if (liquiditySource === ERC20BridgeSource.Native) {
@@ -247,9 +308,9 @@ function isDexSampleFilter(ds: DexSample, amount: BigNumber): boolean {
 
 /**
  * Generates a report sample for a MultiHop source
- * NOTE: this is used for the QuoteReport.
+ * NOTE: this is used for the QuoteReport and quote price comparison data
  */
-function multiHopSampleToReportSource(
+export function multiHopSampleToReportSource(
     ds: DexSample<MultiHopFillData>,
     marketOperation: MarketOperation,
 ): MultiHopQuoteReportEntry {
@@ -279,42 +340,16 @@ function multiHopSampleToReportSource(
 
 function _isNativeOrderFromCollapsedFill(cf: Fill): cf is Fill<NativeFillData> {
     const { type } = cf;
-    switch (type) {
-        case FillQuoteTransformerOrderType.Limit:
-        case FillQuoteTransformerOrderType.Rfq:
-        case FillQuoteTransformerOrderType.Otc:
-            return true;
-        case FillQuoteTransformerOrderType.Bridge:
-            return false;
-        default:
-            ((_x: never) => {
-                throw new Error('unreachable');
-            })(type);
-    }
-}
-
-function _isRFQOrderfromType(orderType: FillQuoteTransformerOrderType) {
-    switch (orderType) {
-        case FillQuoteTransformerOrderType.Rfq:
-        case FillQuoteTransformerOrderType.Otc:
-            return true;
-        case FillQuoteTransformerOrderType.Limit:
-        case FillQuoteTransformerOrderType.Bridge:
-            return false;
-        default:
-            ((_: never) => {
-                throw new Error('unreachable');
-            })(orderType);
-    }
+    return type === FillQuoteTransformerOrderType.Limit || type === FillQuoteTransformerOrderType.Rfq;
 }
 
 /**
  * Generates a report entry for a native order
- * NOTE: this is used for the QuoteReport.
+ * NOTE: this is used for the QuoteReport and quote price comparison data
  */
-function nativeOrderToReportEntry(
+export function nativeOrderToReportEntry(
     type: FillQuoteTransformerOrderType,
-    fillData: NativeFillData,
+    fillData: NativeLimitOrderFillData | NativeRfqOrderFillData,
     fillableAmount: BigNumber,
     comparisonPrice?: BigNumber | undefined,
     quoteRequestor?: QuoteRequestor,
@@ -326,12 +361,13 @@ function nativeOrderToReportEntry(
     };
 
     // if we find this is an rfqt order, label it as such and associate makerUri
-    const isRFQ = _isRFQOrderfromType(type);
+    const isRFQ = type === FillQuoteTransformerOrderType.Rfq;
     const rfqtMakerUri =
         isRFQ && quoteRequestor ? quoteRequestor.getMakerUriForSignature(fillData.signature) : undefined;
 
     if (isRFQ) {
         const nativeOrder = fillData.order as RfqOrderFields;
+        // tslint:disable-next-line: no-object-literal-type-assertion
         return {
             liquiditySource: ERC20BridgeSource.Native,
             ...nativeOrderBase,
@@ -342,6 +378,7 @@ function nativeOrderToReportEntry(
             fillData,
         };
     } else {
+        // tslint:disable-next-line: no-object-literal-type-assertion
         return {
             liquiditySource: ERC20BridgeSource.Native,
             ...nativeOrderBase,
@@ -355,7 +392,7 @@ function nativeOrderToReportEntry(
  * Generates a report entry for an indicative RFQ Quote
  * NOTE: this is used for the QuoteReport and quote price comparison data
  */
-function indicativeQuoteToReportEntry(
+export function indicativeQuoteToReportEntry(
     order: V4RFQIndicativeQuoteMM,
     comparisonPrice?: BigNumber | undefined,
 ): IndicativeRfqOrderQuoteReportEntry {
@@ -365,6 +402,7 @@ function indicativeQuoteToReportEntry(
         fillableTakerAmount: order.takerAmount,
     };
 
+    // tslint:disable-next-line: no-object-literal-type-assertion
     return {
         liquiditySource: ERC20BridgeSource.Native,
         ...nativeOrderBase,
@@ -381,7 +419,6 @@ function indicativeQuoteToReportEntry(
 export function jsonifyFillData(source: ExtendedQuoteReportIndexedEntry): ExtendedQuoteReportIndexedEntryOutbound {
     return {
         ...source,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
         fillData: JSON.stringify(source.fillData, (key: string, value: any) => {
             if (key === '_samplerContract') {
                 return {};

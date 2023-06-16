@@ -5,8 +5,6 @@
  */
 import { ContractArtifact } from 'ethereum-types';
 
-import * as AaveV2Sampler from '../test/generated-artifacts/AaveV2Sampler.json';
-import * as AaveV3Sampler from '../test/generated-artifacts/AaveV3Sampler.json';
 import * as ApproximateBuys from '../test/generated-artifacts/ApproximateBuys.json';
 import * as BalanceChecker from '../test/generated-artifacts/BalanceChecker.json';
 import * as BalancerSampler from '../test/generated-artifacts/BalancerSampler.json';
@@ -30,12 +28,14 @@ import * as ICurve from '../test/generated-artifacts/ICurve.json';
 import * as IGMX from '../test/generated-artifacts/IGMX.json';
 import * as IMooniswap from '../test/generated-artifacts/IMooniswap.json';
 import * as IMStable from '../test/generated-artifacts/IMStable.json';
+import * as IMultiBridge from '../test/generated-artifacts/IMultiBridge.json';
 import * as IPlatypus from '../test/generated-artifacts/IPlatypus.json';
 import * as IShell from '../test/generated-artifacts/IShell.json';
 import * as IUniswapExchangeQuotes from '../test/generated-artifacts/IUniswapExchangeQuotes.json';
 import * as IUniswapV2Router01 from '../test/generated-artifacts/IUniswapV2Router01.json';
 import * as KyberDmmSampler from '../test/generated-artifacts/KyberDmmSampler.json';
 import * as LidoSampler from '../test/generated-artifacts/LidoSampler.json';
+import * as LiquidityProviderSampler from '../test/generated-artifacts/LiquidityProviderSampler.json';
 import * as MakerPSMSampler from '../test/generated-artifacts/MakerPSMSampler.json';
 import * as MooniswapSampler from '../test/generated-artifacts/MooniswapSampler.json';
 import * as MStableSampler from '../test/generated-artifacts/MStableSampler.json';
@@ -48,14 +48,11 @@ import * as TestNativeOrderSampler from '../test/generated-artifacts/TestNativeO
 import * as TwoHopSampler from '../test/generated-artifacts/TwoHopSampler.json';
 import * as UniswapSampler from '../test/generated-artifacts/UniswapSampler.json';
 import * as UniswapV2Sampler from '../test/generated-artifacts/UniswapV2Sampler.json';
-import * as UniswapV3MultiQuoter from '../test/generated-artifacts/UniswapV3MultiQuoter.json';
 import * as UniswapV3Sampler from '../test/generated-artifacts/UniswapV3Sampler.json';
 import * as UtilitySampler from '../test/generated-artifacts/UtilitySampler.json';
 import * as VelodromeSampler from '../test/generated-artifacts/VelodromeSampler.json';
 import * as WooPPSampler from '../test/generated-artifacts/WooPPSampler.json';
 export const artifacts = {
-    AaveV2Sampler: AaveV2Sampler as ContractArtifact,
-    AaveV3Sampler: AaveV3Sampler as ContractArtifact,
     ApproximateBuys: ApproximateBuys as ContractArtifact,
     BalanceChecker: BalanceChecker as ContractArtifact,
     BalancerSampler: BalancerSampler as ContractArtifact,
@@ -73,6 +70,7 @@ export const artifacts = {
     GMXSampler: GMXSampler as ContractArtifact,
     KyberDmmSampler: KyberDmmSampler as ContractArtifact,
     LidoSampler: LidoSampler as ContractArtifact,
+    LiquidityProviderSampler: LiquidityProviderSampler as ContractArtifact,
     MStableSampler: MStableSampler as ContractArtifact,
     MakerPSMSampler: MakerPSMSampler as ContractArtifact,
     MooniswapSampler: MooniswapSampler as ContractArtifact,
@@ -84,7 +82,6 @@ export const artifacts = {
     TwoHopSampler: TwoHopSampler as ContractArtifact,
     UniswapSampler: UniswapSampler as ContractArtifact,
     UniswapV2Sampler: UniswapV2Sampler as ContractArtifact,
-    UniswapV3MultiQuoter: UniswapV3MultiQuoter as ContractArtifact,
     UniswapV3Sampler: UniswapV3Sampler as ContractArtifact,
     UtilitySampler: UtilitySampler as ContractArtifact,
     VelodromeSampler: VelodromeSampler as ContractArtifact,
@@ -97,6 +94,7 @@ export const artifacts = {
     IGMX: IGMX as ContractArtifact,
     IMStable: IMStable as ContractArtifact,
     IMooniswap: IMooniswap as ContractArtifact,
+    IMultiBridge: IMultiBridge as ContractArtifact,
     IPlatypus: IPlatypus as ContractArtifact,
     IShell: IShell as ContractArtifact,
     IUniswapExchangeQuotes: IUniswapExchangeQuotes as ContractArtifact,

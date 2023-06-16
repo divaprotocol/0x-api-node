@@ -1,10 +1,10 @@
 import * as _ from 'lodash';
 import { Counter, Summary } from 'prom-client';
-import { Connection, In } from 'typeorm';
+import { In } from 'typeorm';
 import { Repository } from 'typeorm/repository/Repository';
 
 import { BigNumber, RfqFirmQuoteValidator, RfqOrderFields } from '../asset-swapper';
-import { ONE_MINUTE_MS, RFQ_FIRM_QUOTE_CACHE_EXPIRY, ZERO } from '../constants';
+import { ONE_MINUTE_MS, ZERO } from '../constants';
 import { MakerBalanceChainCacheEntity } from '../entities/MakerBalanceChainCacheEntity';
 import { logger } from '../logger';
 
@@ -60,17 +60,6 @@ export class PostgresRfqtFirmQuoteValidator implements RfqFirmQuoteValidator {
     private readonly _cacheExpiryThresholdMs: number;
     private readonly _workerId: string;
 
-    public static create(connection: Connection | undefined): RfqFirmQuoteValidator | undefined {
-        if (connection === undefined) {
-            return undefined;
-        }
-
-        return new PostgresRfqtFirmQuoteValidator(
-            connection.getRepository(MakerBalanceChainCacheEntity),
-            RFQ_FIRM_QUOTE_CACHE_EXPIRY,
-        );
-    }
-
     constructor(
         chainCacheRepository: Repository<MakerBalanceChainCacheEntity>,
         cacheExpiryThresholdMs: number = THRESHOLD_CACHE_EXPIRED_MS,
@@ -80,6 +69,7 @@ export class PostgresRfqtFirmQuoteValidator implements RfqFirmQuoteValidator {
         this._workerId = _.uniqueId('rfqw_');
     }
 
+    // tslint:disable-next-line: prefer-function-over-method
     public async getRfqtTakerFillableAmountsAsync(quotes: RfqOrderFields[]): Promise<BigNumber[]> {
         // TODO: Handle error on query
 
@@ -112,7 +102,6 @@ export class PostgresRfqtFirmQuoteValidator implements RfqFirmQuoteValidator {
         PG_LATENCY_READ.labels(this._workerId).observe(new Date().getTime() - timeStart);
         const nowUnix = new Date().getTime();
         for (const result of cacheResults) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- TODO: fix me!
             makerLookup[result.makerAddress!] = this._calculateMakerBalanceFromResult(result, makerToken, nowUnix);
         }
 

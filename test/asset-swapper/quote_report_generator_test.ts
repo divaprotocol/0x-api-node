@@ -1,3 +1,5 @@
+// tslint:disable:custom-no-magic-numbers
+// tslint:disable:no-object-literal-type-assertion
 import { FillQuoteTransformerOrderType, LimitOrder, LimitOrderFields, RfqOrder } from '@0x/protocol-utils';
 import { BigNumber, hexUtils } from '@0x/utils';
 import * as chai from 'chai';
@@ -5,24 +7,26 @@ import * as _ from 'lodash';
 import 'mocha';
 import * as TypeMoq from 'typemoq';
 
+import { MarketOperation, NativeOrderWithFillableAmounts } from '../../src/asset-swapper/types';
 import {
-    MarketOperation,
-    NativeOrderWithFillableAmounts,
+    DexSample,
     ERC20BridgeSource,
     Fill,
+    MultiHopFillData,
     NativeFillData,
     NativeLimitOrderFillData,
     NativeRfqOrderFillData,
+} from '../../src/asset-swapper/utils/market_operation_utils/types';
+import { QuoteRequestor } from '../../src/asset-swapper/utils/quote_requestor';
+
+import {
     BridgeQuoteReportEntry,
+    generateQuoteReport,
     MultiHopQuoteReportEntry,
     NativeLimitOrderQuoteReportEntry,
     NativeRfqOrderQuoteReportEntry,
     QuoteReportEntry,
-} from '../../src/asset-swapper/types';
-import { DexSample, MultiHopFillData } from '../../src/asset-swapper/utils/market_operation_utils/types';
-import { QuoteRequestor } from '../../src/asset-swapper/utils/quote_requestor';
-
-import { generateQuoteReport } from './../../src/asset-swapper/utils/quote_report_generator';
+} from './../../src/asset-swapper/utils/quote_report_generator';
 import { chaiSetup } from './utils/chai_setup';
 import { getRandomAmount, getRandomSignature } from './utils/utils';
 
@@ -307,10 +311,16 @@ describe('generateQuoteReport', async () => {
             firstHopSource: {
                 source: ERC20BridgeSource.Balancer,
                 fillData: {},
+                encodeCall: () => '',
+                handleCallResults: (_callResults) => [new BigNumber(1337)],
+                handleRevert: (_c) => [],
             },
             secondHopSource: {
                 source: ERC20BridgeSource.Curve,
                 fillData: {},
+                encodeCall: () => '',
+                handleCallResults: (_callResults) => [new BigNumber(1337)],
+                handleRevert: (_c) => [],
             },
         };
         const twoHopSample: DexSample<MultiHopFillData> = {
@@ -340,7 +350,7 @@ describe('generateQuoteReport', async () => {
 function expectEqualQuoteReportEntries(
     actual: QuoteReportEntry[],
     expected: QuoteReportEntry[],
-    variableName = 'quote report entries',
+    variableName: string = 'quote report entries',
 ): void {
     expect(actual.length).to.eql(expected.length);
     actual.forEach((actualEntry, idx) => {
@@ -353,6 +363,7 @@ function expectEqualQuoteReportEntries(
                 'fillableTakerFeeAmount',
             ]) as LimitOrderFields;
             expect(actualEntry.fillData.order).to.eql(
+                // tslint:disable-next-line:no-unnecessary-type-assertion
                 (expectedEntry.fillData as NativeFillData).order,
                 `${variableName} incorrect at index ${idx}`,
             );

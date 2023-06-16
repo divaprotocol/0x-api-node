@@ -51,9 +51,6 @@
         "enableSlippageProtection": {
             "type": "string",
             "enum": ["true", "false"]
-        },
-        "priceImpactProtectionPercentage": {
-            "$ref": "/numberSchema"
         }
     },
     "oneOf": [

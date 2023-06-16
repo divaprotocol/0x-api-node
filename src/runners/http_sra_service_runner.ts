@@ -3,10 +3,11 @@
  */
 import { cacheControl, createDefaultServer } from '@0x/api-utils';
 import * as express from 'express';
+// tslint:disable-next-line:no-implicit-dependencies
 import * as core from 'express-serve-static-core';
 import { Server } from 'http';
 
-import { getDefaultAppDependenciesAsync } from './utils';
+import { AppDependencies, getDefaultAppDependenciesAsync } from '../app';
 import {
     defaultHttpServiceConfig,
     SENTRY_DSN,
@@ -24,9 +25,8 @@ import { createOrderBookRouter } from '../routers/orderbook_router';
 import { createSRARouter } from '../routers/sra_router';
 import { SentryInit, SentryOptions } from '../sentry';
 import { WebsocketService } from '../services/websocket_service';
-import { HttpServiceConfig, AppDependencies } from '../types';
+import { HttpServiceConfig } from '../types';
 import { providerUtils } from '../utils/provider_utils';
-import * as promBundle from 'express-prom-bundle';
 
 import { destroyCallback } from './utils';
 
@@ -56,60 +56,14 @@ if (require.main === module) {
 async function runHttpServiceAsync(
     dependencies: AppDependencies,
     config: HttpServiceConfig,
-    // $eslint-fix-me https://github.com/rhinodavid/eslint-fix-me
-    // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-    useMetricsMiddleware: boolean = true,
     _app?: core.Express,
 ): Promise<Server> {
     const app = _app || express();
-
-    if (dependencies.hasSentry) {
-        const options: SentryOptions = {
-            app: app,
-            dsn: SENTRY_DSN,
-            environment: SENTRY_ENVIRONMENT,
-            paths: [SRA_PATH, ORDERBOOK_PATH],
-            sampleRate: SENTRY_SAMPLE_RATE,
-            tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
-        };
-
-        SentryInit(options);
-    }
-
-    if (useMetricsMiddleware) {
-        /**
-         * express-prom-bundle will create a histogram metric called "http_request_duration_seconds"
-         * The official prometheus docs describe how to use this exact histogram metric: https://prometheus.io/docs/practices/histograms/
-         * We use the following labels: statusCode, path
-         */
-        const metricsMiddleware = promBundle({
-            autoregister: false,
-            includeStatusCode: true,
-            includePath: true,
-            includeMethod: true,
-            customLabels: { chainId: undefined },
-            normalizePath: [['/order/.*', '/order/#orderHash']],
-            transformLabels: (labels, req, _res) => {
-                Object.assign(labels, { chainId: req.header('0x-chain-id') || 1 });
-            },
-            // buckets used for the http_request_duration_seconds histogram. All numbers (in seconds) represents boundaries of buckets.
-            // tslint:disable-next-line: custom-no-magic-numbers
-            buckets: [0.01, 0.04, 0.1, 0.3, 0.6, 1, 1.5, 2, 2.5, 3, 4, 6, 9],
-        });
-        app.use(metricsMiddleware);
-    }
-
     app.use(addressNormalizer);
     app.use(cacheControl(DEFAULT_CACHE_AGE_SECONDS));
     const server = createDefaultServer(config, app, logger, destroyCallback(dependencies));
 
     app.get('/', rootHandler);
-
-    if (dependencies.orderBookService === undefined) {
-        logger.error('OrderBookService dependency is missing, exiting');
-        process.exit(1);
-    }
-
     // SRA http service
     app.use(SRA_PATH, createSRARouter(dependencies.orderBookService));
 
@@ -128,6 +82,19 @@ async function runHttpServiceAsync(
     } else {
         logger.error('Could not establish kafka connection, exiting');
         process.exit(1);
+    }
+
+    if (dependencies.hasSentry) {
+        const options: SentryOptions = {
+            app,
+            dsn: SENTRY_DSN,
+            environment: SENTRY_ENVIRONMENT,
+            paths: [SRA_PATH, ORDERBOOK_PATH],
+            sampleRate: SENTRY_SAMPLE_RATE,
+            tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
+        };
+
+        SentryInit(options);
     }
 
     server.listen(config.httpPort);

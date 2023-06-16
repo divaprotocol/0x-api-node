@@ -1,10 +1,13 @@
 import { AlertError, BadRequestError, generalErrorCodeToReason as baseReasons } from '@0x/api-utils';
-import { StatusCodes } from 'http-status-codes';
+import * as HttpStatus from 'http-status-codes';
 
 import { ONE_SECOND_MS } from './constants';
 import { SignedLimitOrder } from './types';
 
 export {
+    BadRequestError,
+    ErrorBody,
+    GeneralErrorCodes,
     InternalServerError,
     InvalidAPIKeyError,
     MalformedJSONError,
@@ -16,24 +19,20 @@ export {
     ValidationErrorItem,
 } from '@0x/api-utils';
 
+// tslint:disable:max-classes-per-file
 export class InsufficientFundsError extends BadRequestError<APIErrorCodes> {
-    public statusCode = StatusCodes.BAD_REQUEST;
+    public statusCode = HttpStatus.BAD_REQUEST;
     public generalErrorCode = APIErrorCodes.InsufficientFundsError;
 }
 
 export class EthSellNotSupportedError extends BadRequestError<APIErrorCodes> {
-    public statusCode = StatusCodes.BAD_REQUEST;
+    public statusCode = HttpStatus.BAD_REQUEST;
     public generalErrorCode = APIErrorCodes.EthSellNotSupported;
 }
 
 export class GasEstimationError extends BadRequestError<APIErrorCodes> {
-    public statusCode = StatusCodes.BAD_REQUEST;
+    public statusCode = HttpStatus.BAD_REQUEST;
     public generalErrorCode = APIErrorCodes.GasEstimationFailed;
-}
-
-export class ServiceDisabledError extends BadRequestError<APIErrorCodes> {
-    public statusCode = StatusCodes.BAD_REQUEST;
-    public generalErrorCode = APIErrorCodes.ServiceDisabled;
 }
 
 export enum APIErrorCodes {
@@ -65,10 +64,6 @@ export enum ValidationErrorReasons {
     UnfillableRequiresMakerAddress = 'MAKER_ADDRESS_REQUIRED_TO_FETCH_UNFILLABLE_ORDERS',
     MultipleFeeTypesUsed = 'MULTIPLE_FEE_TYPES_USED',
     FeeRecipientMissing = 'FEE_RECIPIENT_MISSING',
-    MinSlippageTooLow = 'MINIMUM_SLIPPAGE_IS_TOO_LOW',
-    PriceImpactTooHigh = 'PRICE_IMPACT_TOO_HIGH',
-    InvalidGaslessFeeType = 'INVALID_GASLESS_FEE_TYPE',
-    InvalidMetaTransactionVersion = 'INVALID_META_TRANSACTION_VERSION',
 }
 
 export class ExpiredOrderError extends AlertError {
@@ -79,6 +74,13 @@ export class ExpiredOrderError extends AlertError {
         super();
         this.expiry = order.expiry.toNumber();
         this.expiredForSeconds = Date.now() / ONE_SECOND_MS - this.expiry;
+    }
+}
+
+export class OrderWatcherSyncError extends AlertError {
+    public message = `Error syncing OrderWatcher!`;
+    constructor(public details?: string) {
+        super();
     }
 }
 

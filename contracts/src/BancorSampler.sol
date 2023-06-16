@@ -22,9 +22,11 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IBancor.sol";
 
+
 contract BancorSampler {
+
     /// @dev Base gas limit for Bancor calls.
-    uint256 private constant BANCOR_CALL_GAS = 300e3; // 300k
+    uint256 constant private BANCOR_CALL_GAS = 300e3; // 300k
 
     struct BancorSamplerOpts {
         IBancorRegistry registry;
@@ -45,17 +47,25 @@ contract BancorSampler {
         address takerToken,
         address makerToken,
         uint256[] memory takerTokenAmounts
-    ) public view returns (address bancorNetwork, address[] memory path, uint256[] memory makerTokenAmounts) {
-        makerTokenAmounts = new uint256[](takerTokenAmounts.length);
+    )
+        public
+        view
+        returns (address bancorNetwork, address[] memory path, uint256[] memory makerTokenAmounts)
+    {
         if (opts.paths.length == 0) {
             return (bancorNetwork, path, makerTokenAmounts);
         }
         (bancorNetwork, path) = _findBestPath(opts, takerToken, makerToken, takerTokenAmounts);
+        makerTokenAmounts = new uint256[](takerTokenAmounts.length);
 
         for (uint256 i = 0; i < makerTokenAmounts.length; i++) {
-            try IBancorNetwork(bancorNetwork).rateByPath{gas: BANCOR_CALL_GAS}(path, takerTokenAmounts[i]) returns (
-                uint256 amount
-            ) {
+            try
+                IBancorNetwork(bancorNetwork)
+                    .rateByPath
+                        {gas: BANCOR_CALL_GAS}
+                        (path, takerTokenAmounts[i])
+                returns (uint256 amount)
+            {
                 makerTokenAmounts[i] = amount;
                 // Break early if there are 0 amounts
                 if (makerTokenAmounts[i] == 0) {
@@ -83,14 +93,23 @@ contract BancorSampler {
         address takerToken,
         address makerToken,
         uint256[] memory makerTokenAmounts
-    ) public view returns (address bancorNetwork, address[] memory path, uint256[] memory takerTokenAmounts) {}
+    )
+        public
+        view
+        returns (address bancorNetwork, address[] memory path, uint256[] memory takerTokenAmounts)
+    {
+    }
 
     function _findBestPath(
         BancorSamplerOpts memory opts,
         address takerToken,
         address makerToken,
         uint256[] memory takerTokenAmounts
-    ) internal view returns (address bancorNetwork, address[] memory path) {
+    )
+        internal
+        view
+        returns (address bancorNetwork, address[] memory path)
+    {
         bancorNetwork = opts.registry.getAddress(opts.registry.BANCOR_NETWORK());
         if (opts.paths.length == 0) {
             return (bancorNetwork, path);
@@ -103,11 +122,12 @@ contract BancorSampler {
             }
 
             try
-                IBancorNetwork(bancorNetwork).rateByPath{gas: BANCOR_CALL_GAS}(
-                    opts.paths[i],
-                    takerTokenAmounts[takerTokenAmounts.length - 1]
-                )
-            returns (uint256 amount) {
+                IBancorNetwork(bancorNetwork)
+                    .rateByPath
+                        {gas: BANCOR_CALL_GAS}
+                        (opts.paths[i], takerTokenAmounts[takerTokenAmounts.length-1])
+                returns (uint256 amount)
+            {
                 if (amount > maxBoughtAmount) {
                     maxBoughtAmount = amount;
                     path = opts.paths[i];

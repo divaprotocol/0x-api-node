@@ -1,3 +1,4 @@
+import * as apiKeySchema from './api_key_schema.json';
 import * as integratorsAclSchema from './integrators_acl_schema.json';
 import * as integratorAclSchema from './integrator_acl_schema.json';
 import * as metaTransactionFillRequestSchema from './meta_transaction_fill_request_schema.json';
@@ -18,6 +19,7 @@ import * as sraOrdersChannelSubscribeSchema from './sra_ws_orders_channel_subscr
 import * as swapQuoteRequestSchema from './swap_quote_request_schema.json';
 
 export const schemas = {
+    apiKeySchema,
     integratorAclSchema,
     integratorsAclSchema,
     metaTransactionFillRequestSchema,

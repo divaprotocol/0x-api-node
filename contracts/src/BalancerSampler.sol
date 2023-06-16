@@ -22,15 +22,17 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/IBalancer.sol";
 
+
 contract BalancerSampler {
+
     /// @dev Base gas limit for Balancer calls.
-    uint256 private constant BALANCER_CALL_GAS = 300e3; // 300k
+    uint256 constant private BALANCER_CALL_GAS = 300e3; // 300k
 
     // Balancer math constants
     // https://github.com/balancer-labs/balancer-core/blob/master/contracts/BConst.sol
-    uint256 private constant BONE = 10 ** 18;
-    uint256 private constant MAX_IN_RATIO = BONE / 2;
-    uint256 private constant MAX_OUT_RATIO = (BONE / 3) + 1 wei;
+    uint256 constant private BONE = 10 ** 18;
+    uint256 constant private MAX_IN_RATIO = BONE / 2;
+    uint256 constant private MAX_OUT_RATIO = (BONE / 3) + 1 wei;
 
     struct BalancerState {
         uint256 takerTokenBalance;
@@ -52,7 +54,11 @@ contract BalancerSampler {
         address takerToken,
         address makerToken,
         uint256[] memory takerTokenAmounts
-    ) public view returns (uint256[] memory makerTokenAmounts) {
+    )
+        public
+        view
+        returns (uint256[] memory makerTokenAmounts)
+    {
         IBalancer pool = IBalancer(poolAddress);
         uint256 numSamples = takerTokenAmounts.length;
         makerTokenAmounts = new uint256[](numSamples);
@@ -74,15 +80,18 @@ contract BalancerSampler {
                 break;
             }
             try
-                pool.calcOutGivenIn{gas: BALANCER_CALL_GAS}(
-                    poolState.takerTokenBalance,
-                    poolState.takerTokenWeight,
-                    poolState.makerTokenBalance,
-                    poolState.makerTokenWeight,
-                    takerTokenAmounts[i],
-                    poolState.swapFee
-                )
-            returns (uint256 amount) {
+                pool.calcOutGivenIn
+                    {gas: BALANCER_CALL_GAS}
+                    (
+                        poolState.takerTokenBalance,
+                        poolState.takerTokenWeight,
+                        poolState.makerTokenBalance,
+                        poolState.makerTokenWeight,
+                        takerTokenAmounts[i],
+                        poolState.swapFee
+                    )
+                returns (uint256 amount)
+            {
                 makerTokenAmounts[i] = amount;
                 // Break early if there are 0 amounts
                 if (makerTokenAmounts[i] == 0) {
@@ -107,7 +116,11 @@ contract BalancerSampler {
         address takerToken,
         address makerToken,
         uint256[] memory makerTokenAmounts
-    ) public view returns (uint256[] memory takerTokenAmounts) {
+    )
+        public
+        view
+        returns (uint256[] memory takerTokenAmounts)
+    {
         IBalancer pool = IBalancer(poolAddress);
         uint256 numSamples = makerTokenAmounts.length;
         takerTokenAmounts = new uint256[](numSamples);
@@ -129,15 +142,18 @@ contract BalancerSampler {
                 break;
             }
             try
-                pool.calcInGivenOut{gas: BALANCER_CALL_GAS}(
-                    poolState.takerTokenBalance,
-                    poolState.takerTokenWeight,
-                    poolState.makerTokenBalance,
-                    poolState.makerTokenWeight,
-                    makerTokenAmounts[i],
-                    poolState.swapFee
-                )
-            returns (uint256 amount) {
+                pool.calcInGivenOut
+                    {gas: BALANCER_CALL_GAS}
+                    (
+                        poolState.takerTokenBalance,
+                        poolState.takerTokenWeight,
+                        poolState.makerTokenBalance,
+                        poolState.makerTokenWeight,
+                        makerTokenAmounts[i],
+                        poolState.swapFee
+                    )
+                returns (uint256 amount)
+            {
                 // Handles this revert scenario:
                 // https://github.com/balancer-labs/balancer-core/blob/master/contracts/BPool.sol#L443
                 if (amount > _bmul(poolState.takerTokenBalance, MAX_IN_RATIO)) {
@@ -162,16 +178,20 @@ contract BalancerSampler {
     /// @param a The first operand.
     /// @param b The second operand.
     /// @param c The result of the multiplication, or 0 if `bmul` would've reverted.
-    function _bmul(uint256 a, uint256 b) private pure returns (uint256 c) {
-        uint256 c0 = a * b;
+    function _bmul(uint256 a, uint256 b)
+        private
+        pure
+        returns (uint256 c)
+    {
+        uint c0 = a * b;
         if (a != 0 && c0 / a != b) {
             return 0;
         }
-        uint256 c1 = c0 + (BONE / 2);
+        uint c1 = c0 + (BONE / 2);
         if (c1 < c0) {
             return 0;
         }
-        uint256 c2 = c1 / BONE;
+        uint c2 = c1 / BONE;
         return c2;
     }
 }

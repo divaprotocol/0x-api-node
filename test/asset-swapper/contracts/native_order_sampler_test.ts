@@ -10,6 +10,7 @@ import {
 import { Web3Wrapper } from '@0x/dev-utils';
 import { SignatureType } from '@0x/protocol-utils';
 import { BigNumber, hexUtils } from '@0x/utils';
+import * as _ from 'lodash';
 
 import { LimitOrderFields } from '../../../src/asset-swapper';
 import { NULL_ADDRESS } from '../../../src/asset-swapper/utils/market_operation_utils/constants';
@@ -17,6 +18,8 @@ import { artifacts } from '../../artifacts';
 import { TestNativeOrderSamplerContract } from '../../wrappers';
 
 const { NULL_BYTES, ZERO_AMOUNT } = constants;
+
+// tslint:disable: custom-no-magic-numbers
 
 blockchainTests.resets('NativeOrderSampler contract', (env) => {
     let testContract: TestNativeOrderSamplerContract;
@@ -94,7 +97,11 @@ blockchainTests.resets('NativeOrderSampler contract', (env) => {
         };
     }
 
-    async function fundMakerAsync(order: LimitOrderFields, balanceScaling = 1, allowanceScaling = 1): Promise<void> {
+    async function fundMakerAsync(
+        order: LimitOrderFields,
+        balanceScaling: number = 1,
+        allowanceScaling: number = 1,
+    ): Promise<void> {
         const token = makerToken;
         let amount = order.makerAmount;
         amount = amount.times(getLimitOrderFillableTakerAmount(order).div(BigNumber.max(1, order.takerAmount)));

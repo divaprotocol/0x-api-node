@@ -23,15 +23,23 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/IUniswapExchangeQuotes.sol";
 import "./SamplerUtils.sol";
 
+
 interface IUniswapExchangeFactory {
+
     /// @dev Get the exchange for a token.
     /// @param tokenAddress The address of the token contract.
-    function getExchange(address tokenAddress) external view returns (address);
+    function getExchange(address tokenAddress)
+        external
+        view
+        returns (address);
 }
 
-contract UniswapSampler is SamplerUtils {
+
+contract UniswapSampler is
+    SamplerUtils
+{
     /// @dev Gas limit for Uniswap calls.
-    uint256 private constant UNISWAP_CALL_GAS = 150e3; // 150k
+    uint256 constant private UNISWAP_CALL_GAS = 150e3; // 150k
 
     /// @dev Sample sell quotes from Uniswap.
     /// @param router Address of the Uniswap Router
@@ -45,17 +53,19 @@ contract UniswapSampler is SamplerUtils {
         address takerToken,
         address makerToken,
         uint256[] memory takerTokenAmounts
-    ) public view returns (uint256[] memory makerTokenAmounts) {
+    )
+        public
+        view
+        returns (uint256[] memory makerTokenAmounts)
+    {
         _assertValidPair(makerToken, takerToken);
         uint256 numSamples = takerTokenAmounts.length;
         makerTokenAmounts = new uint256[](numSamples);
 
-        IUniswapExchangeQuotes takerTokenExchange = takerToken == address(0)
-            ? IUniswapExchangeQuotes(0)
-            : _getUniswapExchange(router, takerToken);
-        IUniswapExchangeQuotes makerTokenExchange = makerToken == address(0)
-            ? IUniswapExchangeQuotes(0)
-            : _getUniswapExchange(router, makerToken);
+        IUniswapExchangeQuotes takerTokenExchange = takerToken == address(0) ?
+            IUniswapExchangeQuotes(0) : _getUniswapExchange(router, takerToken);
+        IUniswapExchangeQuotes makerTokenExchange = makerToken == address(0) ?
+            IUniswapExchangeQuotes(0) : _getUniswapExchange(router, makerToken);
         for (uint256 i = 0; i < numSamples; i++) {
             bool didSucceed = true;
             if (makerToken == address(0)) {
@@ -105,17 +115,19 @@ contract UniswapSampler is SamplerUtils {
         address takerToken,
         address makerToken,
         uint256[] memory makerTokenAmounts
-    ) public view returns (uint256[] memory takerTokenAmounts) {
+    )
+        public
+        view
+        returns (uint256[] memory takerTokenAmounts)
+    {
         _assertValidPair(makerToken, takerToken);
         uint256 numSamples = makerTokenAmounts.length;
         takerTokenAmounts = new uint256[](numSamples);
 
-        IUniswapExchangeQuotes takerTokenExchange = takerToken == address(0)
-            ? IUniswapExchangeQuotes(0)
-            : _getUniswapExchange(router, takerToken);
-        IUniswapExchangeQuotes makerTokenExchange = makerToken == address(0)
-            ? IUniswapExchangeQuotes(0)
-            : _getUniswapExchange(router, makerToken);
+        IUniswapExchangeQuotes takerTokenExchange = takerToken == address(0) ?
+            IUniswapExchangeQuotes(0) : _getUniswapExchange(router, takerToken);
+        IUniswapExchangeQuotes makerTokenExchange = makerToken == address(0) ?
+            IUniswapExchangeQuotes(0) : _getUniswapExchange(router, makerToken);
         for (uint256 i = 0; i < numSamples; i++) {
             bool didSucceed = true;
             if (makerToken == address(0)) {
@@ -164,14 +176,21 @@ contract UniswapSampler is SamplerUtils {
         address uniswapExchangeAddress,
         bytes4 functionSelector,
         uint256 inputAmount
-    ) private view returns (uint256 outputAmount, bool didSucceed) {
+    )
+        private
+        view
+        returns (uint256 outputAmount, bool didSucceed)
+    {
         if (uniswapExchangeAddress == address(0)) {
             return (outputAmount, didSucceed);
         }
         bytes memory resultData;
-        (didSucceed, resultData) = uniswapExchangeAddress.staticcall.gas(UNISWAP_CALL_GAS)(
-            abi.encodeWithSelector(functionSelector, inputAmount)
-        );
+        (didSucceed, resultData) =
+            uniswapExchangeAddress.staticcall.gas(UNISWAP_CALL_GAS)(
+                abi.encodeWithSelector(
+                    functionSelector,
+                    inputAmount
+                ));
         if (didSucceed) {
             outputAmount = abi.decode(resultData, (uint256));
         }
@@ -182,10 +201,14 @@ contract UniswapSampler is SamplerUtils {
     /// @param router Address of the Uniswap router.
     /// @param tokenAddress Address of the token contract.
     /// @return exchange `IUniswapExchangeQuotes` for the token.
-    function _getUniswapExchange(
-        address router,
-        address tokenAddress
-    ) private view returns (IUniswapExchangeQuotes exchange) {
-        exchange = IUniswapExchangeQuotes(address(IUniswapExchangeFactory(router).getExchange(tokenAddress)));
+    function _getUniswapExchange(address router, address tokenAddress)
+        private
+        view
+        returns (IUniswapExchangeQuotes exchange)
+    {
+        exchange = IUniswapExchangeQuotes(
+            address(IUniswapExchangeFactory(router)
+            .getExchange(tokenAddress))
+        );
     }
 }

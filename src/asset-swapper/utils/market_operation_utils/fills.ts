@@ -1,30 +1,12 @@
 import { FillQuoteTransformerOrderType } from '@0x/protocol-utils';
 import { BigNumber, hexUtils } from '@0x/utils';
 
-import {
-    MarketOperation,
-    NativeOrderWithFillableAmounts,
-    ERC20BridgeSource,
-    FeeEstimate,
-    FeeSchedule,
-    Fill,
-} from '../../types';
+import { MarketOperation, NativeOrderWithFillableAmounts } from '../../types';
 
-import { POSITIVE_INF, SOURCE_FLAGS } from './constants';
-import { DexSample, MultiHopFillData } from './types';
+import { DEFAULT_FEE_ESTIMATE, POSITIVE_INF, SOURCE_FLAGS } from './constants';
+import { DexSample, ERC20BridgeSource, FeeSchedule, Fill } from './types';
 
-function toNativeSourceFlagKey(type: FillQuoteTransformerOrderType): 'LimitOrder' | 'RfqOrder' | 'OtcOrder' {
-    switch (type) {
-        case FillQuoteTransformerOrderType.Limit:
-            return 'LimitOrder';
-        case FillQuoteTransformerOrderType.Rfq:
-            return 'RfqOrder';
-        case FillQuoteTransformerOrderType.Otc:
-            return 'OtcOrder';
-        default:
-            return 'LimitOrder';
-    }
-}
+// tslint:disable: prefer-for-of no-bitwise completed-docs
 
 /**
  * Converts the ETH value to an amount in output tokens.
@@ -57,7 +39,7 @@ export function nativeOrderToFill(
     outputAmountPerEth: BigNumber,
     inputAmountPerEth: BigNumber,
     fees: FeeSchedule,
-    filterNegativeAdjustedRateOrders = true,
+    filterNegativeAdjustedRateOrders: boolean = true,
 ): Fill | undefined {
     const sourcePathId = hexUtils.random();
     // Create a single path from all orders.
@@ -66,7 +48,8 @@ export function nativeOrderToFill(
     const takerAmount = fillableTakerAmount.plus(fillableTakerFeeAmount);
     const input = side === MarketOperation.Sell ? takerAmount : makerAmount;
     const output = side === MarketOperation.Sell ? makerAmount : takerAmount;
-    const { fee, gas } = fees[ERC20BridgeSource.Native](order);
+    const { fee, gas } =
+        fees[ERC20BridgeSource.Native] === undefined ? DEFAULT_FEE_ESTIMATE : fees[ERC20BridgeSource.Native]!(order);
     const outputPenalty = ethToOutputAmount({
         input,
         output,
@@ -96,7 +79,7 @@ export function nativeOrderToFill(
         adjustedOutput,
         input: clippedInput,
         output: clippedOutput,
-        flags: SOURCE_FLAGS[toNativeSourceFlagKey(type)],
+        flags: SOURCE_FLAGS[type === FillQuoteTransformerOrderType.Rfq ? 'RfqOrder' : 'LimitOrder'],
         source: ERC20BridgeSource.Native,
         type,
         fillData: { ...order },
@@ -115,7 +98,8 @@ export function dexSampleToFill(
     const { source, fillData } = sample;
     const input = sample.input;
     const output = sample.output;
-    const { fee, gas } = fees[source](sample.fillData);
+    const { fee, gas } =
+        fees[source] === undefined ? DEFAULT_FEE_ESTIMATE : fees[source]!(sample.fillData) || DEFAULT_FEE_ESTIMATE;
 
     const penalty = ethToOutputAmount({
         input,
@@ -135,33 +119,6 @@ export function dexSampleToFill(
         type: FillQuoteTransformerOrderType.Bridge,
         flags: SOURCE_FLAGS[source],
         gas,
-    };
-}
-
-export function twoHopSampleToFill(
-    side: MarketOperation,
-    twoHopSample: DexSample<MultiHopFillData>,
-    outputAmountPerEth: BigNumber,
-    multihopFeeEstimate: FeeEstimate,
-): Fill {
-    const { fillData } = twoHopSample;
-
-    // Flags to indicate which sources are used
-    const flags =
-        SOURCE_FLAGS.MultiHop |
-        SOURCE_FLAGS[fillData.firstHopSource.source] |
-        SOURCE_FLAGS[fillData.secondHopSource.source];
-
-    // Penalty of going to those sources in terms of output
-    const sourcePenalty = outputAmountPerEth.times(multihopFeeEstimate(fillData).fee).integerValue();
-    return {
-        ...twoHopSample,
-        flags,
-        type: FillQuoteTransformerOrderType.Bridge,
-        adjustedOutput: adjustOutput(side, twoHopSample.output, sourcePenalty),
-        sourcePathId: `${ERC20BridgeSource.MultiHop}-${fillData.firstHopSource.source}-${fillData.secondHopSource.source}`,
-        // We don't have this information at this stage
-        gas: 0,
     };
 }
 

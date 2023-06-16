@@ -1,9 +1,7 @@
 CHANGELOG.md
-__build__
+lib
 node_modules
 generated-artifacts
 generated-wrappers
 generated-artifacts
 generated-wrappers
-foundry-artifacts
-foundry-cache

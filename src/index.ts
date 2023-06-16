@@ -1,5 +1,4 @@
-import { getAppAsync } from './app';
-import { getDefaultAppDependenciesAsync } from './runners/utils';
+import { getAppAsync, getDefaultAppDependenciesAsync } from './app';
 import { defaultHttpServiceConfig } from './config';
 import { logger } from './logger';
 import { providerUtils } from './utils/provider_utils';

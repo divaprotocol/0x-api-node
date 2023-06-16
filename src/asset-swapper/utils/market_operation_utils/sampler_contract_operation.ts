@@ -3,14 +3,11 @@ import { BigNumber, decodeBytesAsRevertError, logUtils } from '@0x/utils';
 
 import { ERC20BridgeSamplerContract } from '../../../wrappers';
 
-import { ERC20BridgeSource, FillData } from '../../types';
-import { SourceQuoteOperation } from './types';
+import { ERC20BridgeSource, FillData, SourceQuoteOperation } from './types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
-type Parameters<T> = T extends (...args: infer TArgs) => any ? TArgs : never;
+export type Parameters<T> = T extends (...args: infer TArgs) => any ? TArgs : never;
 
-interface SamplerContractCall<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
+export interface SamplerContractCall<
     TFunc extends (...args: any[]) => ContractFunctionObj<any>,
     TFillData extends FillData = FillData,
 > {
@@ -21,7 +18,6 @@ interface SamplerContractCall<
 }
 
 export class SamplerContractOperation<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
     TFunc extends (...args: any[]) => ContractFunctionObj<any>,
     TFillData extends FillData = FillData,
 > implements SourceQuoteOperation<TFillData>
@@ -35,7 +31,7 @@ export class SamplerContractOperation<
 
     constructor(opts: { source: ERC20BridgeSource; fillData?: TFillData } & SamplerContractCall<TFunc, TFillData>) {
         this.source = opts.source;
-        this.fillData = opts.fillData || ({} as TFillData);
+        this.fillData = opts.fillData || ({} as TFillData); // tslint:disable-line:no-object-literal-type-assertion
         this._samplerContract = opts.contract;
         this._samplerFunction = opts.function;
         this._params = opts.params;

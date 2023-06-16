@@ -36,7 +36,7 @@ export abstract class SwapInfoCache {
     public getCachedSwapInfoForPair(
         takerToken: string,
         makerToken: string,
-        ignoreExpired = true,
+        ignoreExpired: boolean = true,
     ): BalancerSwaps | undefined {
         const key = JSON.stringify([takerToken, makerToken]);
         const value = this._cache[key];

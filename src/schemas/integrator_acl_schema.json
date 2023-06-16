@@ -19,6 +19,9 @@
         "label": {
             "type": "string"
         },
+        "plp": {
+            "type": "boolean"
+        },
         "rfqm": {
             "type": "boolean"
         },
@@ -27,14 +30,8 @@
         },
         "slippageModel": {
             "type": "boolean"
-        },
-        "positiveSlippagePercent": {
-            "type": "number"
-        },
-        "feeRecipient": {
-            "$ref": "/addressSchema"
         }
     },
-    "required": ["label", "integratorId", "apiKeys", "rfqt", "rfqm"],
+    "required": ["label", "integratorId", "apiKeys", "rfqt", "rfqm", "plp"],
     "type": "object"
 }

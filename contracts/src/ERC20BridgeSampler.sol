@@ -20,8 +20,6 @@
 pragma solidity ^0.6;
 pragma experimental ABIEncoderV2;
 
-import "./AaveV2Sampler.sol";
-import "./AaveV3Sampler.sol";
 import "./BalancerSampler.sol";
 import "./BalancerV2Sampler.sol";
 import "./BalancerV2BatchSampler.sol";
@@ -34,6 +32,7 @@ import "./DODOV2Sampler.sol";
 import "./GMXSampler.sol";
 import "./KyberDmmSampler.sol";
 import "./LidoSampler.sol";
+import "./LiquidityProviderSampler.sol";
 import "./MakerPSMSampler.sol";
 import "./MStableSampler.sol";
 import "./MooniswapSampler.sol";
@@ -49,9 +48,8 @@ import "./VelodromeSampler.sol";
 import "./WooPPSampler.sol";
 import "./UtilitySampler.sol";
 
+
 contract ERC20BridgeSampler is
-    AaveV2Sampler,
-    AaveV3Sampler,
     BalancerSampler,
     BalancerV2Sampler,
     BalancerV2BatchSampler,
@@ -64,6 +62,7 @@ contract ERC20BridgeSampler is
     GMXSampler,
     KyberDmmSampler,
     LidoSampler,
+    LiquidityProviderSampler,
     MakerPSMSampler,
     MStableSampler,
     MooniswapSampler,
@@ -79,6 +78,7 @@ contract ERC20BridgeSampler is
     WooPPSampler,
     UtilitySampler
 {
+
     struct CallResults {
         bytes data;
         bool success;
@@ -87,7 +87,10 @@ contract ERC20BridgeSampler is
     /// @dev Call multiple public functions on this contract in a single transaction.
     /// @param callDatas ABI-encoded call data for each function call.
     /// @return callResults ABI-encoded results data for each call.
-    function batchCall(bytes[] calldata callDatas) external returns (CallResults[] memory callResults) {
+    function batchCall(bytes[] calldata callDatas)
+        external
+        returns (CallResults[] memory callResults)
+    {
         callResults = new CallResults[](callDatas.length);
         for (uint256 i = 0; i != callDatas.length; ++i) {
             callResults[i].success = true;

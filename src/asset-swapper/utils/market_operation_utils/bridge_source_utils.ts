@@ -2,12 +2,25 @@ import { ChainId } from '@0x/contract-addresses';
 import { BigNumber } from '@0x/utils';
 
 import {
+    ACRYPTOS_BSC_INFOS,
     APESWAP_ROUTER_BY_CHAIN_ID,
     BAKERYSWAP_ROUTER_BY_CHAIN_ID,
+    BELT_BSC_INFOS,
     BISWAP_ROUTER_BY_CHAIN_ID,
+    CHEESESWAP_ROUTER_BY_CHAIN_ID,
     COMPONENT_POOLS_BY_CHAIN_ID,
     CRYPTO_COM_ROUTER_BY_CHAIN_ID,
+    CURVE_AVALANCHE_INFOS,
+    CURVE_FANTOM_INFOS,
+    CURVE_MAINNET_INFOS,
+    CURVE_OPTIMISM_INFOS,
+    CURVE_POLYGON_INFOS,
+    CURVE_V2_AVALANCHE_INFOS,
+    CURVE_V2_FANTOM_INFOS,
+    CURVE_V2_MAINNET_INFOS,
+    CURVE_V2_POLYGON_INFOS,
     DFYN_ROUTER_BY_CHAIN_ID,
+    ELLIPSIS_BSC_INFOS,
     FIREBIRDONESWAP_BSC_INFOS,
     FIREBIRDONESWAP_POLYGON_INFOS,
     IRONSWAP_POLYGON_INFOS,
@@ -26,14 +39,11 @@ import {
     PLATYPUS_AVALANCHE_INFOS,
     QUICKSWAP_ROUTER_BY_CHAIN_ID,
     SADDLE_MAINNET_INFOS,
-    SADDLE_OPTIMISM_INFOS,
-    SADDLE_ARBITRUM_INFOS,
     SHELL_POOLS_BY_CHAIN_ID,
     SHIBASWAP_ROUTER_BY_CHAIN_ID,
     SPIRITSWAP_ROUTER_BY_CHAIN_ID,
     SPOOKYSWAP_ROUTER_BY_CHAIN_ID,
     SUSHISWAP_ROUTER_BY_CHAIN_ID,
-    SYNAPSE_ARBITRUM_INFOS,
     SYNAPSE_AVALANCHE_INFOS,
     SYNAPSE_BSC_INFOS,
     SYNAPSE_FANTOM_INFOS,
@@ -44,38 +54,25 @@ import {
     UBESWAP_ROUTER_BY_CHAIN_ID,
     UNISWAPV2_ROUTER_BY_CHAIN_ID,
     WAULTSWAP_ROUTER_BY_CHAIN_ID,
+    XSIGMA_MAINNET_INFOS,
     YOSHI_ROUTER_BY_CHAIN_ID,
 } from './constants';
-import {
-    ACRYPTOS_BSC_INFOS,
-    BELT_BSC_INFOS,
-    CURVE_V2_ARBITRUM_INFOS,
-    CURVE_AVALANCHE_INFOS,
-    CURVE_FANTOM_INFOS,
-    CURVE_MAINNET_INFOS,
-    CURVE_OPTIMISM_INFOS,
-    CURVE_POLYGON_INFOS,
-    CURVE_V2_AVALANCHE_INFOS,
-    CURVE_V2_FANTOM_INFOS,
-    CURVE_V2_MAINNET_INFOS,
-    CURVE_V2_POLYGON_INFOS,
-    ELLIPSIS_BSC_INFOS,
-} from './curve';
-import { CurveInfo, PlatypusInfo } from './types';
-import { ERC20BridgeSource } from '../../types';
+import { CurveInfo, ERC20BridgeSource, PlatypusInfo } from './types';
 
-// eslint-disable-next-line @typescript-eslint/ban-types
+// tslint:disable-next-line: completed-docs ban-types
 export function isValidAddress(address: string | String): address is string {
     return (typeof address === 'string' || address instanceof String) && address.toString() !== NULL_ADDRESS;
 }
 
+// tslint:disable completed-docs
 export function getDodoV2Offsets(): BigNumber[] {
     return Array(MAX_DODOV2_POOLS_QUERIED)
         .fill(0)
         .map((_v, i) => new BigNumber(i));
 }
 
-function getShellsForPair(chainId: ChainId, takerToken: string, makerToken: string): string[] {
+// tslint:disable completed-docs
+export function getShellsForPair(chainId: ChainId, takerToken: string, makerToken: string): string[] {
     if (chainId !== ChainId.Mainnet) {
         return [];
     }
@@ -84,7 +81,8 @@ function getShellsForPair(chainId: ChainId, takerToken: string, makerToken: stri
         .map((i) => i.poolAddress);
 }
 
-function getComponentForPair(chainId: ChainId, takerToken: string, makerToken: string): string[] {
+// tslint:disable completed-docs
+export function getComponentForPair(chainId: ChainId, takerToken: string, makerToken: string): string[] {
     if (chainId !== ChainId.Mainnet) {
         return [];
     }
@@ -93,7 +91,8 @@ function getComponentForPair(chainId: ChainId, takerToken: string, makerToken: s
         .map((i) => i.poolAddress);
 }
 
-function getMStableForPair(chainId: ChainId, takerToken: string, makerToken: string): string[] {
+// tslint:disable completed-docs
+export function getMStableForPair(chainId: ChainId, takerToken: string, makerToken: string): string[] {
     if (chainId !== ChainId.Mainnet && chainId !== ChainId.Polygon) {
         return [];
     }
@@ -102,7 +101,8 @@ function getMStableForPair(chainId: ChainId, takerToken: string, makerToken: str
         .map((i) => i.poolAddress);
 }
 
-function getCurveInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+// tslint:disable completed-docs
+export function getCurveInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     switch (chainId) {
         case ChainId.Mainnet:
             return Object.values(CURVE_MAINNET_INFOS).filter((c) =>
@@ -154,34 +154,51 @@ function getCurveInfosForPair(chainId: ChainId, takerToken: string, makerToken: 
     }
 }
 
-function getCurveV2InfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
-    const filterTokenInfos = function (curveV2ChainInfos: { [name: string]: CurveInfo }): CurveInfo[] {
-        return Object.values(curveV2ChainInfos).filter((c) =>
-            [makerToken, takerToken].every(
-                (t) =>
-                    (c.tokens.includes(t) && c.metaTokens === undefined) ||
-                    (c.tokens.includes(t) &&
-                        [makerToken, takerToken].filter((v) => c.metaTokens?.includes(v)).length > 0),
-            ),
-        );
-    };
+// tslint:disable completed-docs
+export function getCurveV2InfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     switch (chainId) {
         case ChainId.Mainnet:
-            return filterTokenInfos(CURVE_V2_MAINNET_INFOS);
+            return Object.values(CURVE_V2_MAINNET_INFOS).filter((c) =>
+                [makerToken, takerToken].every(
+                    (t) =>
+                        (c.tokens.includes(t) && c.metaTokens === undefined) ||
+                        (c.tokens.includes(t) &&
+                            [makerToken, takerToken].filter((v) => c.metaTokens?.includes(v)).length > 0),
+                ),
+            );
         case ChainId.Polygon:
-            return filterTokenInfos(CURVE_V2_POLYGON_INFOS);
+            return Object.values(CURVE_V2_POLYGON_INFOS).filter((c) =>
+                [makerToken, takerToken].every(
+                    (t) =>
+                        (c.tokens.includes(t) && c.metaTokens === undefined) ||
+                        (c.tokens.includes(t) &&
+                            [makerToken, takerToken].filter((v) => c.metaTokens?.includes(v)).length > 0),
+                ),
+            );
         case ChainId.Fantom:
-            return filterTokenInfos(CURVE_V2_FANTOM_INFOS);
+            return Object.values(CURVE_V2_FANTOM_INFOS).filter((c) =>
+                [makerToken, takerToken].every(
+                    (t) =>
+                        (c.tokens.includes(t) && c.metaTokens === undefined) ||
+                        (c.tokens.includes(t) &&
+                            [makerToken, takerToken].filter((v) => c.metaTokens?.includes(v)).length > 0),
+                ),
+            );
         case ChainId.Avalanche:
-            return filterTokenInfos(CURVE_V2_AVALANCHE_INFOS);
-        case ChainId.Arbitrum:
-            return filterTokenInfos(CURVE_V2_ARBITRUM_INFOS);
+            return Object.values(CURVE_V2_AVALANCHE_INFOS).filter((c) =>
+                [makerToken, takerToken].every(
+                    (t) =>
+                        (c.tokens.includes(t) && c.metaTokens === undefined) ||
+                        (c.tokens.includes(t) &&
+                            [makerToken, takerToken].filter((v) => c.metaTokens?.includes(v)).length > 0),
+                ),
+            );
         default:
             return [];
     }
 }
 
-function getNerveInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+export function getNerveInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     if (chainId !== ChainId.BSC) {
         return [];
     }
@@ -194,7 +211,7 @@ function getNerveInfosForPair(chainId: ChainId, takerToken: string, makerToken: 
     );
 }
 
-function getSynapseInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+export function getSynapseInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     switch (chainId) {
         case ChainId.Mainnet:
             return Object.values(SYNAPSE_MAINNET_INFOS).filter((c) =>
@@ -250,21 +267,12 @@ function getSynapseInfosForPair(chainId: ChainId, takerToken: string, makerToken
                             [makerToken, takerToken].filter((v) => c.metaTokens?.includes(v)).length > 0),
                 ),
             );
-        case ChainId.Arbitrum:
-            return Object.values(SYNAPSE_ARBITRUM_INFOS).filter((c) =>
-                [makerToken, takerToken].every(
-                    (t) =>
-                        (c.tokens.includes(t) && c.metaTokens === undefined) ||
-                        (c.tokens.includes(t) &&
-                            [makerToken, takerToken].filter((v) => c.metaTokens?.includes(v)).length > 0),
-                ),
-            );
         default:
             return [];
     }
 }
 
-function getFirebirdOneSwapInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+export function getFirebirdOneSwapInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     if (chainId === ChainId.BSC) {
         return Object.values(FIREBIRDONESWAP_BSC_INFOS).filter((c) =>
             [makerToken, takerToken].every(
@@ -288,7 +296,7 @@ function getFirebirdOneSwapInfosForPair(chainId: ChainId, takerToken: string, ma
     }
 }
 
-function getBeltInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+export function getBeltInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     if (chainId !== ChainId.BSC) {
         return [];
     }
@@ -301,7 +309,7 @@ function getBeltInfosForPair(chainId: ChainId, takerToken: string, makerToken: s
     );
 }
 
-function getEllipsisInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+export function getEllipsisInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     if (chainId !== ChainId.BSC) {
         return [];
     }
@@ -314,15 +322,11 @@ function getEllipsisInfosForPair(chainId: ChainId, takerToken: string, makerToke
     );
 }
 
-function getSaddleInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
-    const chainToInfosMap = {
-        [ChainId.Mainnet]: SADDLE_MAINNET_INFOS,
-        [ChainId.Optimism]: SADDLE_OPTIMISM_INFOS,
-        [ChainId.Arbitrum]: SADDLE_ARBITRUM_INFOS,
-    } as Partial<Record<ChainId, { [name: string]: CurveInfo }>>;
-    const saddleChainInfos = chainToInfosMap[chainId];
-    if (!saddleChainInfos) return [];
-    return Object.values(saddleChainInfos).filter((c) =>
+export function getSaddleInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+    if (chainId !== ChainId.Mainnet) {
+        return [];
+    }
+    return Object.values(SADDLE_MAINNET_INFOS).filter((c) =>
         [makerToken, takerToken].every(
             (t) =>
                 (c.tokens.includes(t) && c.metaTokens === undefined) ||
@@ -331,7 +335,7 @@ function getSaddleInfosForPair(chainId: ChainId, takerToken: string, makerToken:
     );
 }
 
-function getIronSwapInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+export function getIronSwapInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     if (chainId !== ChainId.Polygon) {
         return [];
     }
@@ -344,7 +348,20 @@ function getIronSwapInfosForPair(chainId: ChainId, takerToken: string, makerToke
     );
 }
 
-function getAcryptosInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+export function getXSigmaInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+    if (chainId !== ChainId.Mainnet) {
+        return [];
+    }
+    return Object.values(XSIGMA_MAINNET_INFOS).filter((c) =>
+        [makerToken, takerToken].every(
+            (t) =>
+                (c.tokens.includes(t) && c.metaTokens === undefined) ||
+                (c.tokens.includes(t) && [makerToken, takerToken].filter((v) => c.metaTokens?.includes(v)).length > 0),
+        ),
+    );
+}
+
+export function getAcryptosInfosForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     if (chainId !== ChainId.BSC) {
         return [];
     }
@@ -356,7 +373,7 @@ function getAcryptosInfosForPair(chainId: ChainId, takerToken: string, makerToke
         ),
     );
 }
-function getMobiusMoneyInfoForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
+export function getMobiusMoneyInfoForPair(chainId: ChainId, takerToken: string, makerToken: string): CurveInfo[] {
     if (chainId !== ChainId.Celo) {
         return [];
     }
@@ -396,7 +413,7 @@ export function getShellLikeInfosForPair(
     }
 }
 
-interface CurveDetailedInfo extends CurveInfo {
+export interface CurveDetailedInfo extends CurveInfo {
     makerTokenIdx: number;
     takerTokenIdx: number;
 }
@@ -414,6 +431,7 @@ export function getCurveLikeInfosForPair(
         | ERC20BridgeSource.Ellipsis
         | ERC20BridgeSource.Saddle
         | ERC20BridgeSource.IronSwap
+        | ERC20BridgeSource.XSigma
         | ERC20BridgeSource.FirebirdOneSwap
         | ERC20BridgeSource.ACryptos
         | ERC20BridgeSource.MobiusMoney,
@@ -440,6 +458,9 @@ export function getCurveLikeInfosForPair(
             break;
         case ERC20BridgeSource.Saddle:
             pools = getSaddleInfosForPair(chainId, takerToken, makerToken);
+            break;
+        case ERC20BridgeSource.XSigma:
+            pools = getXSigmaInfosForPair(chainId, takerToken, makerToken);
             break;
         case ERC20BridgeSource.FirebirdOneSwap:
             pools = getFirebirdOneSwapInfosForPair(chainId, takerToken, makerToken);
@@ -473,6 +494,7 @@ export function uniswapV2LikeRouterAddress(
         | ERC20BridgeSource.PancakeSwapV2
         | ERC20BridgeSource.BakerySwap
         | ERC20BridgeSource.ApeSwap
+        | ERC20BridgeSource.CheeseSwap
         | ERC20BridgeSource.QuickSwap
         | ERC20BridgeSource.Dfyn
         | ERC20BridgeSource.WaultSwap
@@ -504,6 +526,8 @@ export function uniswapV2LikeRouterAddress(
             return BAKERYSWAP_ROUTER_BY_CHAIN_ID[chainId];
         case ERC20BridgeSource.ApeSwap:
             return APESWAP_ROUTER_BY_CHAIN_ID[chainId];
+        case ERC20BridgeSource.CheeseSwap:
+            return CHEESESWAP_ROUTER_BY_CHAIN_ID[chainId];
         case ERC20BridgeSource.QuickSwap:
             return QUICKSWAP_ROUTER_BY_CHAIN_ID[chainId];
         case ERC20BridgeSource.Dfyn:

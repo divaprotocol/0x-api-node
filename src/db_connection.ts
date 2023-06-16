@@ -1,25 +1,15 @@
-import { Connection, createConnection } from 'typeorm';
+import { Connection, ConnectionOptions, createConnection } from 'typeorm';
 
-import ormConfig from './ormconfig';
+import * as config from './ormconfig';
 
-let connection: Connection | undefined;
+let connection: Connection;
 
-export async function getDBConnection(): Promise<Connection | undefined> {
-    if (connection !== undefined) {
-        return connection;
-    }
-
-    if (ormConfig === undefined) {
-        return undefined;
-    }
-    connection = await createConnection(ormConfig);
-    return connection;
-}
-
-export async function getDBConnectionOrThrow(): Promise<Connection> {
-    const connection = await getDBConnection();
-    if (connection === undefined) {
-        throw new Error('Could not get a DB connection');
+/**
+ * Creates the DB connnection to use in an app
+ */
+export async function getDBConnectionAsync(): Promise<Connection> {
+    if (!connection) {
+        connection = await createConnection(config as any as ConnectionOptions);
     }
     return connection;
 }

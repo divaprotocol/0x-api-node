@@ -11,6 +11,7 @@ import { NoOpPoolsCache } from './no_op_pools_cache';
 import { AbstractPoolsCache, CacheValue, PoolsCache } from './pools_cache';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+// tslint:disable: member-ordering
 
 const BALANCER_SUBGRAPH_URL = 'https://api.thegraph.com/subgraphs/name/balancer-labs/balancer';
 
@@ -80,9 +81,6 @@ export class BalancerPoolsCache extends AbstractPoolsCache {
                     try {
                         // The list of pools must be relevant to `from` and `to`  for `parsePoolData`
                         const poolData = parsePoolData([pool], from, to);
-                        if (poolData.length === 0) {
-                            continue;
-                        }
                         fromToPools[from][to].push(poolData[0]);
                         // Cache this as we progress through
                         const expiresAt = Date.now() + this._cacheTimeMs;

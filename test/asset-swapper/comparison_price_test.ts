@@ -1,13 +1,18 @@
+// tslint:disable:custom-no-magic-numbers
 import { BigNumber } from '@0x/utils';
 import * as chai from 'chai';
 import * as _ from 'lodash';
 import 'mocha';
 
 import { SOURCE_FLAGS } from '../../src/asset-swapper';
-import { MarketOperation, ERC20BridgeSource, FeeEstimate } from '../../src/asset-swapper/types';
+import { MarketOperation } from '../../src/asset-swapper/types';
 import { getComparisonPrices } from '../../src/asset-swapper/utils/market_operation_utils/comparison_price';
 import { SourceFilters } from '../../src/asset-swapper/utils/market_operation_utils/source_filters';
-import { DexSample, MarketSideLiquidity } from '../../src/asset-swapper/utils/market_operation_utils/types';
+import {
+    DexSample,
+    ERC20BridgeSource,
+    MarketSideLiquidity,
+} from '../../src/asset-swapper/utils/market_operation_utils/types';
 
 import { chaiSetup } from './utils/chai_setup';
 
@@ -34,10 +39,12 @@ const uniswapSample1: DexSample = {
 };
 const dexQuotes: DexSample[] = [curveSample, uniswapSample1];
 
-const nativeOrderFeeEstimate: FeeEstimate = _.constant({
-    gas: NATIVE_ORDER_GAS,
-    fee: GAS_PRICE.times(NATIVE_ORDER_GAS),
-});
+const feeSchedule = {
+    [ERC20BridgeSource.Native]: _.constant({
+        gas: NATIVE_ORDER_GAS,
+        fee: GAS_PRICE.times(NATIVE_ORDER_GAS),
+    }),
+};
 
 const exchangeProxyOverhead = (sourceFlags: bigint) => {
     if ([SOURCE_FLAGS.RfqOrder].includes(sourceFlags)) {
@@ -67,7 +74,6 @@ const buyMarketSideLiquidity: MarketSideLiquidity = {
     quoteSourceFilters: new SourceFilters(),
     isRfqSupported: false,
     blockNumber: 1337420,
-    samplerGasUsage: 1_000_000,
 };
 
 const sellMarketSideLiquidity: MarketSideLiquidity = {
@@ -90,7 +96,6 @@ const sellMarketSideLiquidity: MarketSideLiquidity = {
     quoteSourceFilters: new SourceFilters(),
     isRfqSupported: false,
     blockNumber: 1337420,
-    samplerGasUsage: 1_000_000,
 };
 
 describe('getComparisonPrices', async () => {
@@ -106,7 +111,7 @@ describe('getComparisonPrices', async () => {
             adjustedRate,
             AMOUNT,
             sellMarketSideLiquidity,
-            nativeOrderFeeEstimate,
+            feeSchedule,
             exchangeProxyOverhead,
         );
 
@@ -128,7 +133,7 @@ describe('getComparisonPrices', async () => {
             adjustedRate,
             AMOUNT,
             buyMarketSideLiquidity,
-            nativeOrderFeeEstimate,
+            feeSchedule,
             exchangeProxyOverhead,
         );
 
@@ -148,7 +153,7 @@ describe('getComparisonPrices', async () => {
             adjustedRate,
             AMOUNT,
             sellMarketSideLiquidity,
-            nativeOrderFeeEstimate,
+            feeSchedule,
             exchangeProxyOverhead,
         );
 

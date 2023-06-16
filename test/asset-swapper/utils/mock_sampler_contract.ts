@@ -1,35 +1,52 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ContractTxFunctionObj } from '@0x/base-contract';
 import { constants } from '@0x/contracts-test-utils';
 import { LimitOrderFields, Signature } from '@0x/protocol-utils';
 import { BigNumber, hexUtils } from '@0x/utils';
 
-import { ERC20BridgeSamplerContract } from '../../../src/asset-swapper/../wrappers';
+import { ERC20BridgeSamplerContract } from '../../../src/asset-swapp../../wrappers';
 import { SamplerCallResult } from '../../../src/asset-swapper/types';
 
-type GetOrderFillableAssetAmountResult = BigNumber[];
-type GetOrderFillableAssetAmountHandler = (
+export type GetOrderFillableAssetAmountResult = BigNumber[];
+export type GetOrderFillableAssetAmountHandler = (
     orders: LimitOrderFields[],
     signatures: Signature[],
     devUtilsAddress: string,
 ) => GetOrderFillableAssetAmountResult;
 
-type SampleResults = BigNumber[];
-type SampleSellsUniswapHandler = (
+export type SampleResults = BigNumber[];
+export type SampleSellsUniswapHandler = (
     router: string,
     takerToken: string,
     makerToken: string,
     takerTokenAmounts: BigNumber[],
 ) => SampleResults;
-type SampleBuysUniswapHandler = (
+export type SampleBuysUniswapHandler = (
     router: string,
     takerToken: string,
     makerToken: string,
     makerTokenAmounts: BigNumber[],
 ) => SampleResults;
-type SampleUniswapV2Handler = (router: string, path: string[], assetAmounts: BigNumber[]) => SampleResults;
-type SampleUniswapV3Handler = (quoter: string, path: string[], assetAmounts: BigNumber[]) => UniswapV3SampleResults;
-type UniswapV3SampleResults = [string[], BigNumber[], BigNumber[]];
+export type SampleSellsEth2DaiHandler = (
+    router: string,
+    takerToken: string,
+    makerToken: string,
+    takerTokenAmounts: BigNumber[],
+) => SampleResults;
+export type SampleBuysEth2DaiHandler = (
+    router: string,
+    takerToken: string,
+    makerToken: string,
+    makerTokenAmounts: BigNumber[],
+) => SampleResults;
+export type SampleUniswapV2Handler = (router: string, path: string[], assetAmounts: BigNumber[]) => SampleResults;
+export type SampleBuysMultihopHandler = (path: string[], takerTokenAmounts: BigNumber[]) => SampleResults;
+export type SampleSellsLPHandler = (
+    providerAddress: string,
+    takerToken: string,
+    makerToken: string,
+    takerTokenAmounts: BigNumber[],
+) => SampleResults;
+export type SampleSellsMultihopHandler = (path: string[], takerTokenAmounts: BigNumber[]) => SampleResults;
 
 const DUMMY_PROVIDER = {
     sendAsync: (..._args: any[]): any => {
@@ -40,13 +57,15 @@ const DUMMY_PROVIDER = {
 interface Handlers {
     getLimitOrderFillableMakerAssetAmounts: GetOrderFillableAssetAmountHandler;
     getLimitOrderFillableTakerAssetAmounts: GetOrderFillableAssetAmountHandler;
+    sampleSellsFromLiquidityProvider: SampleSellsLPHandler;
     sampleSellsFromUniswap: SampleSellsUniswapHandler;
     sampleSellsFromUniswapV2: SampleUniswapV2Handler;
-    sampleSellsFromUniswapV3: SampleUniswapV3Handler;
     sampleBuysFromUniswap: SampleBuysUniswapHandler;
     sampleBuysFromUniswapV2: SampleUniswapV2Handler;
-    sampleBuysFromUniswapV3: SampleUniswapV3Handler;
+    sampleBuysFromLiquidityProvider: SampleSellsLPHandler;
 }
+
+// tslint:disable: no-unbound-method
 
 export class MockSamplerContract extends ERC20BridgeSamplerContract {
     private readonly _handlers: Partial<Handlers> = {};
@@ -120,6 +139,22 @@ export class MockSamplerContract extends ERC20BridgeSamplerContract {
         );
     }
 
+    public sampleSellsFromLiquidityProvider(
+        providerAddress: string,
+        takerToken: string,
+        makerToken: string,
+        takerAssetAmounts: BigNumber[],
+    ): ContractTxFunctionObj<BigNumber[]> {
+        return this._wrapCall(
+            super.sampleSellsFromLiquidityProvider,
+            this._handlers.sampleSellsFromLiquidityProvider,
+            providerAddress,
+            takerToken,
+            makerToken,
+            takerAssetAmounts,
+        );
+    }
+
     public sampleBuysFromUniswap(
         router: string,
         takerToken: string,
@@ -154,13 +189,14 @@ export class MockSamplerContract extends ERC20BridgeSamplerContract {
         if (callData === '0x') {
             return callData;
         }
+        // tslint:disable-next-line: custom-no-magic-numbers
         const selector = hexUtils.slice(callData, 0, 4);
         for (const [name, handler] of Object.entries(this._handlers)) {
             if (handler && this.getSelector(name) === selector) {
                 const args = this.getABIDecodedTransactionData<any>(name, callData);
                 const result = (handler as any)(...args);
                 const encoder = this._lookupAbiEncoder(this.getFunctionSignature(name));
-                if (encoder.getReturnValueDataItem().components?.length === 1) {
+                if (encoder.getReturnValueDataItem().components!.length === 1) {
                     return encoder.encodeReturnValues([result]);
                 } else {
                     return encoder.encodeReturnValues(result);
@@ -181,6 +217,7 @@ export class MockSamplerContract extends ERC20BridgeSamplerContract {
     private _wrapCall<TArgs extends any[], TResult>(
         superFn: (this: MockSamplerContract, ...args: TArgs) => ContractTxFunctionObj<TResult>,
         handler?: (this: MockSamplerContract, ...args: TArgs) => TResult,
+        // tslint:disable-next-line: trailing-comma
         ...args: TArgs
     ): ContractTxFunctionObj<TResult> {
         return {

@@ -19,10 +19,15 @@
 
 pragma solidity ^0.6;
 
+
 interface IMStable {
+
     function getSwapOutput(
         address _input,
         address _output,
         uint256 _quantity
-    ) external view returns (uint256 swapOutput);
+    )
+        external
+        view
+        returns (uint256 swapOutput);
 }

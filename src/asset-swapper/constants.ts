@@ -3,11 +3,13 @@ import { SignatureType } from '@0x/protocol-utils';
 import { BigNumber, logUtils } from '@0x/utils';
 
 import {
+    AffiliateFeeType,
     ExchangeProxyContractOpts,
     LogFunction,
     OrderPrunerOpts,
     OrderPrunerPermittedFeeTypes,
     RfqRequestOpts,
+    SwapQuoteGetOutputOpts,
     SwapQuoteRequestOpts,
     SwapQuoterOpts,
 } from './types';
@@ -40,7 +42,7 @@ const PROTOCOL_FEE_MULTIPLIER = new BigNumber(0);
 // default 50% buffer for selecting native orders to be aggregated with other sources
 const MARKET_UTILS_AMOUNT_BUFFER_PERCENTAGE = 0.5;
 
-const ZERO_AMOUNT = new BigNumber(0);
+export const ZERO_AMOUNT = new BigNumber(0);
 const DEFAULT_SWAP_QUOTER_OPTS: SwapQuoterOpts = {
     chainId: ChainId.Mainnet,
     orderRefreshIntervalMs: 10000, // 10 seconds
@@ -49,6 +51,7 @@ const DEFAULT_SWAP_QUOTER_OPTS: SwapQuoterOpts = {
     zeroExGasApiUrl: ZERO_EX_GAS_API_URL,
     rfqt: {
         integratorsWhitelist: [],
+        makerAssetOfferings: {},
         txOriginBlacklist: new Set(),
     },
     tokenAdjacencyGraph: DEFAULT_TOKEN_ADJACENCY_GRAPH_BY_CHAIN_ID[ChainId.Mainnet],
@@ -57,10 +60,19 @@ const DEFAULT_SWAP_QUOTER_OPTS: SwapQuoterOpts = {
 const DEFAULT_EXCHANGE_PROXY_EXTENSION_CONTRACT_OPTS: ExchangeProxyContractOpts = {
     isFromETH: false,
     isToETH: false,
-    sellTokenAffiliateFees: [],
-    buyTokenAffiliateFees: [],
+    affiliateFee: {
+        feeType: AffiliateFeeType.None,
+        recipient: NULL_ADDRESS,
+        buyTokenFeeAmount: ZERO_AMOUNT,
+        sellTokenFeeAmount: ZERO_AMOUNT,
+    },
     refundReceiver: NULL_ADDRESS,
+    isMetaTransaction: false,
     shouldSellEntireBalance: false,
+};
+
+const DEFAULT_EXCHANGE_PROXY_SWAP_QUOTE_GET_OPTS: SwapQuoteGetOutputOpts = {
+    extensionContractOpts: DEFAULT_EXCHANGE_PROXY_EXTENSION_CONTRACT_OPTS,
 };
 
 const DEFAULT_SWAP_QUOTE_REQUEST_OPTS: SwapQuoteRequestOpts = {
@@ -79,7 +91,11 @@ export const DEFAULT_WARNING_LOGGER: LogFunction = (obj, msg) =>
 const EMPTY_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 export const INVALID_SIGNATURE = { signatureType: SignatureType.Invalid, v: 1, r: EMPTY_BYTES32, s: EMPTY_BYTES32 };
 
+export { DEFAULT_FEE_SCHEDULE, DEFAULT_GAS_SCHEDULE } from './utils/market_operation_utils/constants';
+
 export const POSITIVE_SLIPPAGE_FEE_TRANSFORMER_GAS = new BigNumber(30000);
+
+export const KEEP_ALIVE_TTL = 5 * 60 * ONE_SECOND_MS;
 
 export const constants = {
     ZERO_EX_GAS_API_URL,
@@ -97,6 +113,7 @@ export const constants = {
     DEFAULT_SWAP_QUOTER_OPTS,
     DEFAULT_INTERMEDIATE_TOKENS_BY_CHAIN_ID,
     DEFAULT_SWAP_QUOTE_REQUEST_OPTS,
+    DEFAULT_EXCHANGE_PROXY_SWAP_QUOTE_GET_OPTS,
     DEFAULT_EXCHANGE_PROXY_EXTENSION_CONTRACT_OPTS,
     DEFAULT_PER_PAGE,
     DEFAULT_RFQT_REQUEST_OPTS,

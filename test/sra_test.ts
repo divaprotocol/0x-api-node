@@ -9,9 +9,7 @@ import * as HttpStatus from 'http-status-codes';
 import * as _ from 'lodash';
 import 'mocha';
 
-import { getAppAsync } from '../src/app';
-import { getDefaultAppDependenciesAsync } from '../src/runners/utils';
-import { AppDependencies } from '../src/types';
+import { AppDependencies, getAppAsync, getDefaultAppDependenciesAsync } from '../src/app';
 import { LimitOrder } from '../src/asset-swapper';
 import * as config from '../src/config';
 import { DEFAULT_PAGE, DEFAULT_PER_PAGE, NULL_ADDRESS, ONE_SECOND_MS, SRA_PATH } from '../src/constants';
@@ -33,7 +31,6 @@ import { getRandomSignedLimitOrderAsync } from './utils/orders';
 
 // Force reload of the app avoid variables being polluted between test suites
 delete require.cache[require.resolve('../src/app')];
-delete require.cache[require.resolve('../src/runners/utils')];
 
 const SUITE_NAME = 'Standard Relayer API (SRA) integration tests';
 
@@ -72,7 +69,7 @@ describe(SUITE_NAME, () => {
             },
         };
         const orderEntity = orderUtils.serializeOrder(apiOrder);
-        await dependencies.connection?.getRepository(OrderWatcherSignedOrderEntity).save(orderEntity);
+        await dependencies.connection.getRepository(OrderWatcherSignedOrderEntity).save(orderEntity);
         return apiOrder;
     }
 
@@ -109,14 +106,14 @@ describe(SUITE_NAME, () => {
     });
 
     beforeEach(async () => {
-        await dependencies.connection?.runMigrations();
+        await dependencies.connection.runMigrations();
         await blockchainLifecycle.startAsync();
     });
 
     afterEach(async () => {
         await blockchainLifecycle.revertAsync();
         await dependencies.connection
-            ?.createQueryBuilder()
+            .createQueryBuilder()
             .delete()
             .from(OrderWatcherSignedOrderEntity)
             .where('true')
@@ -200,11 +197,9 @@ describe(SUITE_NAME, () => {
                 app,
                 route: `${SRA_PATH}/orders?makerToken=${ZRX_TOKEN_ADDRESS}&trader=${makerAddress}`,
             });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
             const sortByHash = (arr: any[]) => _.sortBy(arr, 'metaData.orderHash');
             const { body } = response;
             // Remove createdAt from response for easier comparison
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
             const cleanRecords = body.records.map((r: any) => _.omit(r, 'metaData.createdAt'));
 
             expect(response.type).to.eq(`application/json`);
@@ -251,7 +246,7 @@ describe(SUITE_NAME, () => {
         });
         it('should return 404 if order is not found', async () => {
             const apiOrder = await addNewOrderAsync({ maker: makerAddress });
-            await dependencies.connection?.manager.delete(OrderWatcherSignedOrderEntity, apiOrder.metaData.orderHash);
+            await dependencies.connection.manager.delete(OrderWatcherSignedOrderEntity, apiOrder.metaData.orderHash);
             const response = await httpGetAsync({ app, route: `${SRA_PATH}/order/${apiOrder.metaData.orderHash}` });
             expect(response.status).to.deep.eq(HttpStatus.NOT_FOUND);
         });
@@ -309,13 +304,13 @@ describe(SUITE_NAME, () => {
                 reason: 'Validation Failed',
                 validationErrors: [
                     {
-                        code: 1000,
                         field: 'baseToken',
+                        code: 1000,
                         reason: "should have required property 'baseToken'",
                     },
                     {
-                        code: 1001,
                         field: 'quoteToken',
+                        code: 1001,
                         reason: 'should match pattern "^0x[0-9a-fA-F]{40}$"',
                     },
                 ],
@@ -458,3 +453,4 @@ describe(SUITE_NAME, () => {
         });
     });
 });
+// tslint:disable:max-file-line-count

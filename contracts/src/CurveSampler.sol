@@ -24,7 +24,11 @@ import "./interfaces/ICurve.sol";
 import "./ApproximateBuys.sol";
 import "./SamplerUtils.sol";
 
-contract CurveSampler is SamplerUtils, ApproximateBuys {
+
+contract CurveSampler is
+    SamplerUtils,
+    ApproximateBuys
+{
     /// @dev Information for sampling from curve sources.
     struct CurveInfo {
         address poolAddress;
@@ -34,7 +38,7 @@ contract CurveSampler is SamplerUtils, ApproximateBuys {
 
     /// @dev Base gas limit for Curve calls. Some Curves have multiple tokens
     ///      So a reasonable ceil is 150k per token. Biggest Curve has 4 tokens.
-    uint256 private constant CURVE_CALL_GAS = 2000e3; // Was 600k for Curve but SnowSwap is using 1500k+
+    uint256 constant private CURVE_CALL_GAS = 2000e3; // Was 600k for Curve but SnowSwap is using 1500k+
 
     /// @dev Sample sell quotes from Curve.
     /// @param curveInfo Curve information specific to this token pair.
@@ -48,18 +52,22 @@ contract CurveSampler is SamplerUtils, ApproximateBuys {
         int128 fromTokenIdx,
         int128 toTokenIdx,
         uint256[] memory takerTokenAmounts
-    ) public view returns (uint256[] memory makerTokenAmounts) {
+    )
+        public
+        view
+        returns (uint256[] memory makerTokenAmounts)
+    {
         uint256 numSamples = takerTokenAmounts.length;
         makerTokenAmounts = new uint256[](numSamples);
         for (uint256 i = 0; i < numSamples; i++) {
-            (bool didSucceed, bytes memory resultData) = curveInfo.poolAddress.staticcall.gas(CURVE_CALL_GAS)(
-                abi.encodeWithSelector(
-                    curveInfo.sellQuoteFunctionSelector,
-                    fromTokenIdx,
-                    toTokenIdx,
-                    takerTokenAmounts[i]
-                )
-            );
+            (bool didSucceed, bytes memory resultData) =
+                curveInfo.poolAddress.staticcall.gas(CURVE_CALL_GAS)(
+                    abi.encodeWithSelector(
+                        curveInfo.sellQuoteFunctionSelector,
+                        fromTokenIdx,
+                        toTokenIdx,
+                        takerTokenAmounts[i]
+                    ));
             uint256 buyAmount = 0;
             if (didSucceed) {
                 buyAmount = abi.decode(resultData, (uint256));
@@ -84,30 +92,33 @@ contract CurveSampler is SamplerUtils, ApproximateBuys {
         int128 fromTokenIdx,
         int128 toTokenIdx,
         uint256[] memory makerTokenAmounts
-    ) public view returns (uint256[] memory takerTokenAmounts) {
+    )
+        public
+        view
+        returns (uint256[] memory takerTokenAmounts)
+    {
         if (curveInfo.buyQuoteFunctionSelector == bytes4(0)) {
             // Buys not supported on this curve, so approximate it.
-            return
-                _sampleApproximateBuys(
-                    ApproximateBuyQuoteOpts({
-                        makerTokenData: abi.encode(toTokenIdx, curveInfo),
-                        takerTokenData: abi.encode(fromTokenIdx, curveInfo),
-                        getSellQuoteCallback: _sampleSellForApproximateBuyFromCurve
-                    }),
-                    makerTokenAmounts
-                );
+            return _sampleApproximateBuys(
+                ApproximateBuyQuoteOpts({
+                    makerTokenData: abi.encode(toTokenIdx, curveInfo),
+                    takerTokenData: abi.encode(fromTokenIdx, curveInfo),
+                    getSellQuoteCallback: _sampleSellForApproximateBuyFromCurve
+                }),
+                makerTokenAmounts
+            );
         }
         uint256 numSamples = makerTokenAmounts.length;
         takerTokenAmounts = new uint256[](numSamples);
         for (uint256 i = 0; i < numSamples; i++) {
-            (bool didSucceed, bytes memory resultData) = curveInfo.poolAddress.staticcall.gas(CURVE_CALL_GAS)(
-                abi.encodeWithSelector(
-                    curveInfo.buyQuoteFunctionSelector,
-                    fromTokenIdx,
-                    toTokenIdx,
-                    makerTokenAmounts[i]
-                )
-            );
+            (bool didSucceed, bytes memory resultData) =
+                curveInfo.poolAddress.staticcall.gas(CURVE_CALL_GAS)(
+                    abi.encodeWithSelector(
+                        curveInfo.buyQuoteFunctionSelector,
+                        fromTokenIdx,
+                        toTokenIdx,
+                        makerTokenAmounts[i]
+                    ));
             uint256 sellAmount = 0;
             if (didSucceed) {
                 sellAmount = abi.decode(resultData, (uint256));
@@ -124,18 +135,23 @@ contract CurveSampler is SamplerUtils, ApproximateBuys {
         bytes memory takerTokenData,
         bytes memory makerTokenData,
         uint256 sellAmount
-    ) private view returns (uint256 buyAmount) {
-        (int128 takerTokenIdx, CurveInfo memory curveInfo) = abi.decode(takerTokenData, (int128, CurveInfo));
-        int128 makerTokenIdx = abi.decode(makerTokenData, (int128));
-        (bool success, bytes memory resultData) = address(this).staticcall(
-            abi.encodeWithSelector(
+    )
+        private
+        view
+        returns (uint256 buyAmount)
+    {
+        (int128 takerTokenIdx, CurveInfo memory curveInfo) =
+            abi.decode(takerTokenData, (int128, CurveInfo));
+        (int128 makerTokenIdx) =
+            abi.decode(makerTokenData, (int128));
+        (bool success, bytes memory resultData) =
+            address(this).staticcall(abi.encodeWithSelector(
                 this.sampleSellsFromCurve.selector,
                 curveInfo,
                 takerTokenIdx,
                 makerTokenIdx,
                 _toSingleValueArray(sellAmount)
-            )
-        );
+            ));
         if (!success) {
             return 0;
         }

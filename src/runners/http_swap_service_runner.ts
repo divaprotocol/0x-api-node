@@ -3,10 +3,11 @@
  */
 import { cacheControl, createDefaultServer } from '@0x/api-utils';
 import * as express from 'express';
+// tslint:disable-next-line:no-implicit-dependencies
 import * as core from 'express-serve-static-core';
 import { Server } from 'http';
 
-import { getDefaultAppDependenciesAsync } from './utils';
+import { AppDependencies, getDefaultAppDependenciesAsync } from '../app';
 import {
     defaultHttpServiceConfig,
     SENTRY_DSN,
@@ -21,7 +22,7 @@ import { addressNormalizer } from '../middleware/address_normalizer';
 import { errorHandler } from '../middleware/error_handling';
 import { createSwapRouter } from '../routers/swap_router';
 import { SentryInit, SentryOptions } from '../sentry';
-import { HttpServiceConfig, AppDependencies } from '../types';
+import { HttpServiceConfig } from '../types';
 import { providerUtils } from '../utils/provider_utils';
 
 import { destroyCallback } from './utils';
@@ -58,20 +59,6 @@ async function runHttpServiceAsync(
     _app?: core.Express,
 ): Promise<Server> {
     const app = _app || express();
-
-    if (dependencies.hasSentry) {
-        const options: SentryOptions = {
-            app: app,
-            dsn: SENTRY_DSN,
-            environment: SENTRY_ENVIRONMENT,
-            paths: [SWAP_PATH],
-            sampleRate: SENTRY_SAMPLE_RATE,
-            tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
-        };
-
-        SentryInit(options);
-    }
-
     app.use(addressNormalizer);
     app.use(cacheControl(DEFAULT_CACHE_AGE_SECONDS));
     const server = createDefaultServer(config, app, logger, destroyCallback(dependencies));
@@ -85,7 +72,20 @@ async function runHttpServiceAsync(
         process.exit(1);
     }
     app.use(errorHandler);
-    server.listen(config.httpPort);
 
+    if (dependencies.hasSentry) {
+        const options: SentryOptions = {
+            app,
+            dsn: SENTRY_DSN,
+            environment: SENTRY_ENVIRONMENT,
+            paths: [SWAP_PATH],
+            sampleRate: SENTRY_SAMPLE_RATE,
+            tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
+        };
+
+        SentryInit(options);
+    }
+
+    server.listen(config.httpPort);
     return server;
 }

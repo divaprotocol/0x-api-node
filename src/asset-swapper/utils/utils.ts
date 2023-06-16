@@ -1,10 +1,11 @@
 import { CommonOrderFields, FillQuoteTransformerOrderType, LimitOrderFields } from '@0x/protocol-utils';
 import { BigNumber } from '@0x/utils';
-import { assert as sharedAssert } from '@0x/assert';
 
-import { NativeOrderFillableAmountFields, SignedNativeOrder, Orderbook } from '../types';
+import { NativeOrderFillableAmountFields, SignedNativeOrder } from '../types';
 
 import { ZERO_AMOUNT } from './market_operation_utils/constants';
+
+// tslint:disable: no-unnecessary-type-assertion completed-docs
 
 /**
  * Given an amount of taker asset, calculate the the amount of maker asset
@@ -24,7 +25,7 @@ export function getNativeAdjustedMakerFillAmount(order: CommonOrderFields, taker
  * @param order The order
  * @param makerFillAmount the amount of maker asset
  */
-function getNativeAdjustedTakerFillAmount(order: CommonOrderFields, makerFillAmount: BigNumber): BigNumber {
+export function getNativeAdjustedTakerFillAmount(order: CommonOrderFields, makerFillAmount: BigNumber): BigNumber {
     // Round up because exchange rate favors Maker
     const takerFillAmount = makerFillAmount
         .multipliedBy(order.takerAmount)
@@ -87,17 +88,3 @@ export function getNativeAdjustedFillableAmountsFromMakerAmount(
                 : ZERO_AMOUNT,
     };
 }
-
-export const assert = {
-    ...sharedAssert,
-    isValidOrderbook(variableName: string, orderFetcher: Orderbook): void {
-        sharedAssert.isFunction(`${variableName}.getOrdersAsync`, orderFetcher.getOrdersAsync.bind(orderFetcher));
-    },
-    isValidPercentage(variableName: string, percentage: number): void {
-        assert.isNumber(variableName, percentage);
-        assert.assert(
-            percentage >= 0 && percentage <= 1,
-            `Expected ${variableName} to be between 0 and 1, but is ${percentage}`,
-        );
-    },
-};

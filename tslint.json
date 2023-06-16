@@ -1,0 +1,19 @@
+{
+    "extends": ["@0x/tslint-config"],
+    "rules": {
+        "custom-no-magic-numbers": false,
+        "no-unnecessary-type-assertion": false,
+        "max-file-line-count": false,
+        "arrow-parens": false,
+        "binary-expression-operand-order": false
+    },
+    "linterOptions": {
+        "exclude": [
+            "./migrations/*",
+            "./generated-wrappers/**/*",
+            "./generated-artifacts/**/*",
+            "./test/generated-wrappers/**/*",
+            "./test/generated-artifacts/**/*"
+        ]
+    }
+}

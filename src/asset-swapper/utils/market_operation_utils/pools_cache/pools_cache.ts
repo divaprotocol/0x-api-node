@@ -67,7 +67,6 @@ export abstract class AbstractPoolsCache implements PoolsCache {
         const key = AbstractPoolsCache._getKey(takerToken, makerToken);
         const value = this._cache.get(key);
         if (!AbstractPoolsCache._isExpired(value)) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- TODO: fix me!
             return value!.pools;
         }
 

@@ -1,14 +1,16 @@
 import { FillQuoteTransformerOrderType } from '@0x/protocol-utils';
 import { BigNumber } from '@0x/utils';
-import * as _ from 'lodash';
 
 import { constants } from '../constants';
-import { MarketOperation, GasSchedule, NativeLimitOrderFillData, OptimizedOrder } from '../types';
+import { MarketOperation } from '../types';
 
+import { GasSchedule, NativeLimitOrderFillData, OptimizedMarketOrder } from './market_operation_utils/types';
 import { getNativeAdjustedTakerFeeAmount } from './utils';
 
 const { PROTOCOL_FEE_MULTIPLIER, ZERO_AMOUNT } = constants;
 const { ROUND_DOWN, ROUND_UP } = BigNumber;
+
+// tslint:disable completed-docs
 
 export interface QuoteFillResult {
     // Maker asset bought.
@@ -30,7 +32,6 @@ export interface QuoteFillResult {
     // Fill amounts by source.
     // For sells, this is the taker assets sold.
     // For buys, this is the maker assets bought.
-    // TODO: key should be ERC20BridgeSource
     fillAmountBySource: { [source: string]: BigNumber };
 }
 
@@ -50,7 +51,6 @@ interface IntermediateQuoteFillResult {
     // (Estimated) gas used.
     gas: number;
     // Input amounts filled by sources.
-    // TODO: key should be ERC20BridgeSource
     inputBySource: { [source: string]: BigNumber };
 }
 
@@ -63,27 +63,28 @@ const EMPTY_QUOTE_INTERMEDIATE_FILL_RESULT = {
     gas: 0,
 };
 
-interface QuoteFillInfo {
-    orders: readonly OptimizedOrder[];
+export interface QuoteFillInfo {
+    orders: OptimizedMarketOrder[];
     fillAmount: BigNumber;
     gasPrice: BigNumber;
     side: MarketOperation;
-    opts: QuoteFillInfoOpts;
+    opts: Partial<QuoteFillInfoOpts>;
 }
 
-interface QuoteFillInfoOpts {
+export interface QuoteFillInfoOpts {
     gasSchedule: GasSchedule;
-    protocolFeeMultiplier?: BigNumber;
-    slippage?: number;
+    protocolFeeMultiplier: BigNumber;
+    slippage: number;
 }
 
-const DEFAULT_SIMULATED_FILL_QUOTE_INFO_OPTS = {
+const DEFAULT_SIMULATED_FILL_QUOTE_INFO_OPTS: QuoteFillInfoOpts = {
+    gasSchedule: {},
     protocolFeeMultiplier: PROTOCOL_FEE_MULTIPLIER,
     slippage: 0,
 };
 
 export interface QuoteFillOrderCall {
-    order: OptimizedOrder;
+    order: OptimizedMarketOrder;
     // Total input amount defined in the order.
     totalOrderInput: BigNumber;
     // Total output amount defined in the order.
@@ -113,7 +114,6 @@ export function simulateBestCaseFill(quoteInfo: QuoteFillInfo): QuoteFillResult 
 }
 
 // Simulates filling a quote in the worst case.
-// NOTES: this isn't correct as it applies slippage to native orders as well.
 export function simulateWorstCaseFill(quoteInfo: QuoteFillInfo): QuoteFillResult {
     const opts = {
         ...DEFAULT_SIMULATED_FILL_QUOTE_INFO_OPTS,
@@ -152,7 +152,8 @@ export function fillQuoteOrders(
             break;
         }
         const { source, fillData } = fo.order;
-        result.gas += gasSchedule[source](fillData);
+        const gas = gasSchedule[source] === undefined ? 0 : gasSchedule[source]!(fillData);
+        result.gas += new BigNumber(gas).toNumber();
         result.inputBySource[source] = result.inputBySource[source] || ZERO_AMOUNT;
 
         const filledInput = solveForInputFillAmount(
@@ -178,7 +179,7 @@ export function fillQuoteOrders(
     return result;
 }
 
-function hasProtocolFee(o: OptimizedOrder): boolean {
+function hasProtocolFee(o: OptimizedMarketOrder): boolean {
     return o.type === FillQuoteTransformerOrderType.Limit;
 }
 
@@ -301,6 +302,11 @@ function fromIntermediateQuoteFillResult(ir: IntermediateQuoteFillResult, quoteI
     };
 }
 
-function getTotalGasUsedByFills(orders: readonly OptimizedOrder[], gasSchedule: GasSchedule): number {
-    return _.sum(orders.map((order) => gasSchedule[order.source](order.fillData)));
+function getTotalGasUsedByFills(fills: OptimizedMarketOrder[], gasSchedule: GasSchedule): number {
+    let gasUsed = 0;
+    for (const f of fills) {
+        const fee = gasSchedule[f.source] === undefined ? 0 : gasSchedule[f.source]!(f.fillData);
+        gasUsed += new BigNumber(fee).toNumber();
+    }
+    return gasUsed;
 }

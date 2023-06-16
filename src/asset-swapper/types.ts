@@ -3,90 +3,27 @@ import { BlockParam, ContractAddresses, GethCallOverrides } from '@0x/contract-w
 import {
     FillQuoteTransformerOrderType,
     LimitOrderFields,
-    OtcOrderFields,
     RfqOrder,
     RfqOrderFields,
     Signature,
 } from '@0x/protocol-utils';
+import { TakerRequestQueryParamsUnnested, V4SignedRfqOrder } from '@0x/quote-server';
 import { Fee } from '@0x/quote-server/lib/src/types';
 import { BigNumber } from '@0x/utils';
+import { AxiosRequestConfig } from 'axios';
+
 import {
-    FillQuoteTransformerRfqOrderInfo,
-    FillQuoteTransformerLimitOrderInfo,
-    FillQuoteTransformerOtcOrderInfo,
-} from '@0x/protocol-utils';
-import { RfqClient } from '../utils/rfq_client';
-import { QuoteRequestor } from './utils/quote_requestor';
+    ERC20BridgeSource,
+    GetMarketOrdersOpts,
+    LiquidityProviderRegistry,
+    OptimizedMarketOrder,
+} from './utils/market_operation_utils/types';
+import { ExtendedQuoteReportSources, PriceComparisonsReport, QuoteReport } from './utils/quote_report_generator';
+import { MetricsProxy } from './utils/quote_requestor';
 import { TokenAdjacencyGraph } from './utils/token_adjacency_graph';
+export { SamplerMetrics } from './utils/market_operation_utils/types';
 
-export interface QuoteReport {
-    sourcesConsidered: QuoteReportEntry[];
-    sourcesDelivered: QuoteReportEntry[];
-}
-
-export interface IndicativeRfqOrderQuoteReportEntry extends QuoteReportEntryBase {
-    liquiditySource: ERC20BridgeSource.Native;
-    fillableTakerAmount: BigNumber;
-    isRFQ: true;
-    makerUri?: string;
-    comparisonPrice?: number;
-}
-
-export interface NativeRfqOrderQuoteReportEntry extends QuoteReportEntryBase {
-    liquiditySource: ERC20BridgeSource.Native;
-    fillData: NativeFillData;
-    fillableTakerAmount: BigNumber;
-    isRFQ: true;
-    nativeOrder: RfqOrderFields;
-    makerUri: string;
-    comparisonPrice?: number;
-}
-
-export interface NativeLimitOrderQuoteReportEntry extends QuoteReportEntryBase {
-    liquiditySource: ERC20BridgeSource.Native;
-    fillData: NativeFillData;
-    fillableTakerAmount: BigNumber;
-    isRFQ: false;
-}
-
-export interface MultiHopQuoteReportEntry extends QuoteReportEntryBase {
-    liquiditySource: ERC20BridgeSource.MultiHop;
-    hopSources: ERC20BridgeSource[];
-}
-
-interface QuoteReportEntryBase {
-    liquiditySource: ERC20BridgeSource;
-    makerAmount: BigNumber;
-    takerAmount: BigNumber;
-    fillData: FillData;
-}
-
-export interface BridgeQuoteReportEntry extends QuoteReportEntryBase {
-    liquiditySource: Exclude<ERC20BridgeSource, ERC20BridgeSource.Native>;
-}
-
-export type QuoteReportEntry =
-    | BridgeQuoteReportEntry
-    | MultiHopQuoteReportEntry
-    | NativeLimitOrderQuoteReportEntry
-    | NativeRfqOrderQuoteReportEntry;
-
-export type ExtendedQuoteReportEntry =
-    | BridgeQuoteReportEntry
-    | MultiHopQuoteReportEntry
-    | NativeLimitOrderQuoteReportEntry
-    | NativeRfqOrderQuoteReportEntry
-    | IndicativeRfqOrderQuoteReportEntry;
-
-export type ExtendedQuoteReportIndexedEntry = ExtendedQuoteReportEntry & {
-    quoteEntryIndex: number;
-    isDelivered: boolean;
-};
-
-export interface ExtendedQuoteReportSources {
-    sourcesConsidered: ExtendedQuoteReportIndexedEntry[];
-    sourcesDelivered: ExtendedQuoteReportIndexedEntry[] | undefined;
-}
+export type Address = string;
 
 /**
  * expiryBufferMs: The number of seconds to add when calculating whether an order is expired or not. Defaults to 300s (5m).
@@ -97,25 +34,13 @@ export interface OrderPrunerOpts {
     permittedOrderFeeTypes: Set<OrderPrunerPermittedFeeTypes>;
 }
 
-export interface SignedLimitOrder {
-    order: LimitOrderFields;
-    type: FillQuoteTransformerOrderType.Limit;
+export interface SignedOrder<T> {
+    order: T;
+    type: FillQuoteTransformerOrderType.Limit | FillQuoteTransformerOrderType.Rfq;
     signature: Signature;
 }
 
-export interface SignedRfqOrder {
-    order: RfqOrderFields;
-    type: FillQuoteTransformerOrderType.Rfq;
-    signature: Signature;
-}
-
-export interface SignedOtcOrder {
-    order: OtcOrderFields;
-    type: FillQuoteTransformerOrderType.Otc;
-    signature: Signature;
-}
-
-export type SignedNativeOrder = SignedLimitOrder | SignedRfqOrder | SignedOtcOrder;
+export type SignedNativeOrder = SignedOrder<LimitOrderFields> | SignedOrder<RfqOrderFields>;
 export type NativeOrderWithFillableAmounts = SignedNativeOrder & NativeOrderFillableAmountFields;
 
 /**
@@ -149,16 +74,43 @@ export interface CalldataInfo {
 /**
  * Interface that varying SwapQuoteConsumers adhere to (exchange consumer, router consumer, forwarder consumer, coordinator consumer)
  * getCalldataOrThrow: Get CalldataInfo to swap for tokens with provided SwapQuote. Throws if invalid SwapQuote is provided.
+ * executeSwapQuoteOrThrowAsync: Executes a web3 transaction to swap for tokens with provided SwapQuote. Throws if invalid SwapQuote is provided.
  */
-export interface SwapQuoteConsumer {
-    getCalldataOrThrow(quote: SwapQuote, opts: Partial<ExchangeProxyContractOpts>): CalldataInfo;
+export interface SwapQuoteConsumerBase {
+    getCalldataOrThrowAsync(quote: SwapQuote, opts: Partial<SwapQuoteGetOutputOpts>): Promise<CalldataInfo>;
+    executeSwapQuoteOrThrowAsync(quote: SwapQuote, opts: Partial<SwapQuoteExecutionOpts>): Promise<string>;
+}
+
+/**
+ * chainId: The chainId that the desired orders should be for.
+ */
+export interface SwapQuoteConsumerOpts {
+    chainId: number;
+    contractAddresses?: ContractAddresses;
+}
+
+/**
+ * Represents the options provided to a generic SwapQuoteConsumer
+ */
+export interface SwapQuoteGetOutputOpts {
+    extensionContractOpts?: ExchangeProxyContractOpts | any;
+}
+
+/**
+ * ethAmount: The amount of eth sent with the execution of a swap.
+ * takerAddress: The address to perform the buy. Defaults to the first available address from the provider.
+ * gasLimit: The amount of gas to send with a transaction (in Gwei). Defaults to an eth_estimateGas rpc call.
+ */
+export interface SwapQuoteExecutionOpts extends SwapQuoteGetOutputOpts {
+    ethAmount?: BigNumber;
+    takerAddress?: string;
+    gasLimit?: number;
 }
 
 export enum AffiliateFeeType {
     None,
     PercentageFee,
     PositiveSlippageFee,
-    GaslessFee,
 }
 
 export interface AffiliateFeeAmount {
@@ -171,7 +123,7 @@ export interface AffiliateFeeAmount {
 /**
  * Automatically resolved protocol fee refund receiver addresses.
  */
-enum ExchangeProxyRefundReceiver {
+export enum ExchangeProxyRefundReceiver {
     // Refund to the taker address.
     Taker = '0x0000000000000000000000000000000000000001',
     // Refund to the sender address.
@@ -187,46 +139,49 @@ enum ExchangeProxyRefundReceiver {
  *        `address(0)`: Stay in flash wallet.
  *        `address(1)`: Send to the taker.
  *        `address(2)`: Send to the sender (caller of `transformERC20()`).
- * @param isMetaTransaction Whether the swap is for meta transaction.
  * @param shouldSellEntireBalance Whether the entire balance of the caller should be sold. Used
  *        for contracts where the balance at transaction time is different to the quote amount.
- *        This forgoes certain VIP routes which do not support this feature.
+ *        This foregos certain VIP routes which do not support this feature.
  */
 export interface ExchangeProxyContractOpts {
     isFromETH: boolean;
     isToETH: boolean;
-    sellTokenAffiliateFees: readonly AffiliateFeeAmount[];
-    buyTokenAffiliateFees: readonly AffiliateFeeAmount[];
-    positiveSlippageFee?: AffiliateFeeAmount; // TODO: use a different type to represent Positive Slippage Fee
+    affiliateFee: AffiliateFeeAmount;
     refundReceiver: string | ExchangeProxyRefundReceiver;
-    metaTransactionVersion?: 'v1' | 'v2'; // Only present if this is a MetaTransaction
+    isMetaTransaction: boolean;
     shouldSellEntireBalance: boolean;
 }
 
-export interface IPath {
-    hasTwoHop(): boolean;
-    getOrdersByType(): OptimizedOrdersByType;
-    getOrders(): readonly OptimizedOrder[];
-    getSlippedOrders(maxSlippage: number): OptimizedOrder[];
-    getSlippedOrdersByType(maxSlippage: number): OptimizedOrdersByType;
+export interface GetExtensionContractTypeOpts {
+    takerAddress?: string;
+    ethAmount?: BigNumber;
 }
 
-interface SwapQuoteBase {
+/**
+ * takerToken: Address of the taker asset.
+ * makerToken: Address of the maker asset.
+ * gasPrice: gas price used to determine protocolFee amount, default to ethGasStation fast amount.
+ * orders: An array of objects conforming to OptimizedMarketOrder. These orders can be used to cover the requested assetBuyAmount plus slippage.
+ * bestCaseQuoteInfo: Info about the best case price for the asset.
+ * worstCaseQuoteInfo: Info about the worst case price for the asset.
+ */
+export interface SwapQuoteBase {
     takerToken: string;
     makerToken: string;
     gasPrice: BigNumber;
-    path: IPath;
+    orders: OptimizedMarketOrder[];
     bestCaseQuoteInfo: SwapQuoteInfo;
     worstCaseQuoteInfo: SwapQuoteInfo;
-    sourceBreakdown: SwapQuoteSourceBreakdown;
+    sourceBreakdown: SwapQuoteOrdersBreakdown;
     quoteReport?: QuoteReport;
     extendedQuoteReportSources?: ExtendedQuoteReportSources;
+    priceComparisonsReport?: PriceComparisonsReport;
+    isTwoHop: boolean;
     makerTokenDecimals: number;
     takerTokenDecimals: number;
     takerAmountPerEth: BigNumber;
     makerAmountPerEth: BigNumber;
     blockNumber: number;
-    samplerGasUsage: number;
 }
 
 /**
@@ -250,6 +205,7 @@ export interface MarketBuySwapQuote extends SwapQuoteBase {
 export type SwapQuote = MarketBuySwapQuote | MarketSellSwapQuote;
 
 /**
+ * feeTakerTokenAmount: The amount of takerAsset reserved for paying takerFees when swapping for desired assets.
  * takerTokenAmount: The amount of takerAsset swapped for desired makerAsset.
  * totalTakerTokenAmount: The total amount of takerAsset required to complete the swap (filling orders, and paying takerFees).
  * makerTokenAmount: The amount of makerAsset that will be acquired through the swap.
@@ -258,6 +214,7 @@ export type SwapQuote = MarketBuySwapQuote | MarketSellSwapQuote;
  * slippage: Amount of slippage to allow for.
  */
 export interface SwapQuoteInfo {
+    feeTakerTokenAmount: BigNumber;
     takerAmount: BigNumber;
     totalTakerAmount: BigNumber;
     makerAmount: BigNumber;
@@ -267,19 +224,28 @@ export interface SwapQuoteInfo {
 }
 
 /**
- * Percentage breakdown of each liquidity source used in quote.
- * Each multihop order is treated as a distinct source.
+ * percentage breakdown of each liquidity source used in quote
  */
-export type SwapQuoteSourceBreakdown = {
-    singleSource: Partial<{
-        [key in Exclude<ERC20BridgeSource, ERC20BridgeSource.MultiHop>]: BigNumber;
-    }>;
-    multihop: {
-        proportion: BigNumber;
-        intermediateToken: string;
-        hops: ERC20BridgeSource[];
-    }[];
-};
+export type SwapQuoteOrdersBreakdown = Partial<
+    { [key in Exclude<ERC20BridgeSource, typeof ERC20BridgeSource.MultiHop>]: BigNumber } & {
+        [ERC20BridgeSource.MultiHop]: {
+            proportion: BigNumber;
+            intermediateToken: string;
+            hops: ERC20BridgeSource[];
+        };
+    }
+>;
+
+/**
+ * nativeExclusivelyRFQ: if set to `true`, Swap quote will exclude Open Orderbook liquidity.
+ *                       If set to `true` and `ERC20BridgeSource.Native` is part of the `excludedSources`
+ *                       array in `SwapQuoteRequestOpts`, an Error will be raised.
+ */
+
+export interface RfqmRequestOptions extends RfqRequestOpts {
+    isLastLook: true;
+    fee: Fee;
+}
 
 export interface RfqRequestOpts {
     takerAddress: string;
@@ -302,6 +268,13 @@ export interface SwapQuoteRequestOpts extends Omit<GetMarketOrdersOpts, 'gasPric
     rfqt?: RfqRequestOpts;
 }
 
+/**
+ * A mapping from RFQ-T/M quote provider URLs to the trading pairs they support.
+ * The value type represents an array of supported asset pairs, with each array element encoded as a 2-element array of token addresses.
+ */
+export interface RfqMakerAssetOfferings {
+    [endpoint: string]: [string, string][];
+}
 export interface AltOffering {
     id: string;
     baseAsset: string;
@@ -312,8 +285,15 @@ export interface AltOffering {
 export interface AltRfqMakerAssetOfferings {
     [endpoint: string]: AltOffering[];
 }
+export enum RfqPairType {
+    Standard = 'standard',
+    Alt = 'alt',
+}
+export interface TypedMakerUrl {
+    url: string;
+    pairType: RfqPairType;
+}
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: fix me!
 export type LogFunction = (obj: object, msg?: string, ...args: any[]) => void;
 
 export interface RfqFirmQuoteValidator {
@@ -328,16 +308,19 @@ export interface Integrator {
 
 export interface SwapQuoterRfqOpts {
     integratorsWhitelist: Integrator[];
+    makerAssetOfferings: RfqMakerAssetOfferings;
     txOriginBlacklist: Set<string>;
+    altRfqCreds?: {
+        altRfqApiKey: string;
+        altRfqProfile: string;
+    };
+    warningLogger?: LogFunction;
+    infoLogger?: LogFunction;
+    metricsProxy?: MetricsProxy;
+    axiosInstanceOpts?: AxiosRequestConfig;
 }
 
 export type AssetSwapperContractAddresses = ContractAddresses;
-
-// `FillData` for native fills. Represents a single native order
-export type NativeRfqOrderFillData = FillQuoteTransformerRfqOrderInfo;
-export type NativeLimitOrderFillData = FillQuoteTransformerLimitOrderInfo;
-export type NativeOtcOrderFillData = FillQuoteTransformerOtcOrderInfo;
-export type NativeFillData = NativeRfqOrderFillData | NativeLimitOrderFillData | NativeOtcOrderFillData;
 
 /**
  * chainId: The ethereum chain id. Defaults to 1 (mainnet).
@@ -353,10 +336,23 @@ export interface SwapQuoterOpts extends OrderPrunerOpts {
     ethereumRpcUrl?: string;
     contractAddresses?: AssetSwapperContractAddresses;
     samplerGasLimit?: number;
+    multiBridgeAddress?: string;
     zeroExGasApiUrl?: string;
     rfqt?: SwapQuoterRfqOpts;
     samplerOverrides?: SamplerOverrides;
     tokenAdjacencyGraph?: TokenAdjacencyGraph;
+    liquidityProviderRegistry?: LiquidityProviderRegistry;
+}
+
+/**
+ * Possible error messages thrown by an SwapQuoterConsumer instance or associated static methods.
+ */
+export enum SwapQuoteConsumerError {
+    InvalidMarketSellOrMarketBuySwapQuote = 'INVALID_MARKET_BUY_SELL_SWAP_QUOTE',
+    InvalidForwarderSwapQuote = 'INVALID_FORWARDER_SWAP_QUOTE_PROVIDED',
+    NoAddressAvailable = 'NO_ADDRESS_AVAILABLE',
+    SignatureRequestDenied = 'SIGNATURE_REQUEST_DENIED',
+    TransactionValueTooLow = 'TRANSACTION_VALUE_TOO_LOW',
 }
 
 /**
@@ -387,6 +383,29 @@ export enum OrderPrunerPermittedFeeTypes {
     TakerDenominatedTakerFee = 'TAKER_DENOMINATED_TAKER_FEE',
 }
 
+/**
+ * Represents a mocked RFQ-T/M maker responses.
+ */
+export interface MockedRfqQuoteResponse {
+    endpoint: string;
+    requestApiKey: string;
+    requestParams: TakerRequestQueryParamsUnnested;
+    responseData: any;
+    responseCode: number;
+    callback?: (config: any) => Promise<any>;
+}
+
+/**
+ * Represents a mocked RFQ-T/M alternative maker responses.
+ */
+export interface AltMockedRfqQuoteResponse {
+    endpoint: string;
+    mmApiKey: string;
+    requestData: AltQuoteRequestData;
+    responseData: any;
+    responseCode: number;
+}
+
 export interface SamplerOverrides {
     overrides: GethCallOverrides;
     block: BlockParam;
@@ -398,295 +417,51 @@ export interface SamplerCallResult {
     data: string;
 }
 
-export interface RfqClientV1PriceRequest {
-    altRfqAssetOfferings: AltRfqMakerAssetOfferings | undefined;
-    assetFillAmount: BigNumber;
-    chainId: number;
-    comparisonPrice: BigNumber | undefined;
-    integratorId: string;
-    intentOnFilling: boolean;
-    makerToken: string;
-    marketOperation: 'Sell' | 'Buy';
-    takerAddress: string;
-    takerToken: string;
-    txOrigin: string;
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+
+export enum AltQuoteModel {
+    Firm = 'firm',
+    Indicative = 'indicative',
 }
 
-export type RfqClientV1QuoteRequest = RfqClientV1PriceRequest;
-
-export interface RfqClientV1Price {
-    expiry: BigNumber;
-    kind: 'rfq' | 'otc';
-    makerAmount: BigNumber;
-    makerToken: string;
-    makerUri: string;
-    takerAmount: BigNumber;
-    takerToken: string;
+export enum AltQuoteSide {
+    Buy = 'buy',
+    Sell = 'sell',
 }
 
-export interface RfqClientV1PriceResponse {
-    prices: RfqClientV1Price[];
+export interface AltQuoteRequestData {
+    market: string;
+    model: AltQuoteModel;
+    profile: string;
+    side: AltQuoteSide;
+    value?: string;
+    amount?: string;
+    meta: {
+        txOrigin: string;
+        taker: string;
+        client: string;
+        existingOrder?: {
+            price: string;
+            value?: string;
+            amount?: string;
+        };
+    };
 }
 
-export interface RfqClientV1Quote {
-    makerUri: string;
-    order: RfqOrder;
-    signature: Signature;
+export interface AltBaseRfqResponse extends AltQuoteRequestData {
+    id: string;
+    price?: string;
 }
 
-export interface RfqClientV1QuoteResponse {
-    quotes: RfqClientV1Quote[];
+export interface AltIndicativeQuoteResponse extends AltBaseRfqResponse {
+    model: AltQuoteModel.Indicative;
+    status: 'live' | 'rejected';
 }
 
-/**
- * DEX sources to aggregate.
- */
-export enum ERC20BridgeSource {
-    Native = 'Native',
-    Uniswap = 'Uniswap',
-    UniswapV2 = 'Uniswap_V2',
-    Curve = 'Curve',
-    Balancer = 'Balancer',
-    BalancerV2 = 'Balancer_V2',
-    Bancor = 'Bancor',
-    MakerPsm = 'MakerPsm',
-    MStable = 'mStable',
-    Mooniswap = 'Mooniswap',
-    MultiHop = 'MultiHop',
-    Shell = 'Shell',
-    SushiSwap = 'SushiSwap',
-    Dodo = 'DODO',
-    DodoV2 = 'DODO_V2',
-    CryptoCom = 'CryptoCom',
-    KyberDmm = 'KyberDMM',
-    Component = 'Component',
-    Saddle = 'Saddle',
-    UniswapV3 = 'Uniswap_V3',
-    CurveV2 = 'Curve_V2',
-    Lido = 'Lido',
-    ShibaSwap = 'ShibaSwap',
-    AaveV2 = 'Aave_V2',
-    AaveV3 = 'Aave_V3',
-    Compound = 'Compound',
-    Synapse = 'Synapse',
-    BancorV3 = 'BancorV3',
-    Synthetix = 'Synthetix',
-    WOOFi = 'WOOFi',
-    // BSC only
-    PancakeSwap = 'PancakeSwap',
-    PancakeSwapV2 = 'PancakeSwap_V2',
-    BiSwap = 'BiSwap',
-    MDex = 'MDex',
-    KnightSwap = 'KnightSwap',
-    BakerySwap = 'BakerySwap',
-    Nerve = 'Nerve',
-    Belt = 'Belt',
-    Ellipsis = 'Ellipsis',
-    ApeSwap = 'ApeSwap',
-    ACryptos = 'ACryptoS',
-    // Polygon only
-    QuickSwap = 'QuickSwap',
-    Dfyn = 'Dfyn',
-    WaultSwap = 'WaultSwap',
-    FirebirdOneSwap = 'FirebirdOneSwap',
-    IronSwap = 'IronSwap',
-    MeshSwap = 'MeshSwap',
-    Dystopia = 'Dystopia',
-    // Avalanche
-    Pangolin = 'Pangolin',
-    TraderJoe = 'TraderJoe',
-    Platypus = 'Platypus',
-    GMX = 'GMX',
-    // Celo only
-    UbeSwap = 'UbeSwap',
-    MobiusMoney = 'MobiusMoney',
-    // Fantom
-    SpiritSwap = 'SpiritSwap',
-    SpookySwap = 'SpookySwap',
-    Beethovenx = 'Beethovenx',
-    MorpheusSwap = 'MorpheusSwap',
-    Yoshi = 'Yoshi',
-    // Optimism
-    Velodrome = 'Velodrome',
-}
-
-// Internal `fillData` field for `Fill` objects.
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface FillData {}
-
-export type FeeEstimate = (fillData: FillData) => { gas: number; fee: BigNumber };
-export type FeeSchedule = Record<ERC20BridgeSource, FeeEstimate>;
-
-type GasEstimate = (fillData: FillData) => number;
-export type GasSchedule = Record<ERC20BridgeSource, GasEstimate>;
-
-export interface FillBase {
-    // Input fill amount (taker asset amount in a sell, maker asset amount in a buy).
-    input: BigNumber;
-    // Output fill amount (maker asset amount in a sell, taker asset amount in a buy).
-    output: BigNumber;
-    // The output fill amount, adjusted by fees.
-    adjustedOutput: BigNumber;
-    // The expected gas cost of this fill
-    gas: number;
-}
-
-/**
- * Represents a node on a fill path.
- */
-export interface Fill<TFillData extends FillData = FillData> extends FillBase {
-    // basic data for every fill
-    source: ERC20BridgeSource;
-    // TODO jacob people seem to agree  that orderType here is more readable
-    type: FillQuoteTransformerOrderType; // should correspond with TFillData
-    fillData: TFillData;
-    // Unique ID of the original source path this fill belongs to.
-    // This is generated when the path is generated and is useful to distinguish
-    // paths that have the same `source` IDs but are distinct (e.g., Curves).
-    sourcePathId: string;
-    // See `SOURCE_FLAGS`.
-    flags: bigint;
-}
-
-export type ExchangeProxyOverhead = (sourceFlags: bigint) => BigNumber;
-
-export interface FillAdjustor {
-    adjustFills: (side: MarketOperation, fills: Fill[]) => Fill[];
-}
-
-export interface GetMarketOrdersRfqOpts extends RfqRequestOpts {
-    rfqClient?: RfqClient;
-    quoteRequestor?: QuoteRequestor;
-    firmQuoteValidator?: RfqFirmQuoteValidator;
-}
-
-/**
- * Options for `getMarketSellOrdersAsync()` and `getMarketBuyOrdersAsync()`.
- */
-export interface GetMarketOrdersOpts {
-    /**
-     * Liquidity sources to exclude. Default is none.
-     */
-    excludedSources: ERC20BridgeSource[];
-    /**
-     * Liquidity sources to include. Default is none, which allows all supported
-     * sources that aren't excluded by `excludedSources`.
-     */
-    includedSources: ERC20BridgeSource[];
-    /**
-     * When generating bridge orders, we use
-     * sampled rate * (1 - bridgeSlippage)
-     * as the rate for calculating maker/taker asset amounts.
-     * This should be a small positive number (e.g., 0.0005) to make up for
-     * small discrepancies between samples and truth.
-     * Default is 0.0005 (5 basis points).
-     */
-    bridgeSlippage: number;
-    /**
-     * Number of samples to take for each DEX quote.
-     */
-    numSamples: number;
-    /**
-     * The exponential sampling distribution base.
-     * A value of 1 will result in evenly spaced samples.
-     * > 1 will result in more samples at lower sizes.
-     * < 1 will result in more samples at higher sizes.
-     * Default: 1
-     */
-    sampleDistributionBase: number;
-    /**
-     * Number of samples to use when creating fill curves with neon-router
-     */
-    neonRouterNumSamples: number;
-    /**
-     * Fees for each liquidity source, expressed in gas.
-     */
-    feeSchedule: FeeSchedule;
-    /**
-     * Exchange proxy gas overhead based on source flag.
-     */
-    exchangeProxyOverhead: ExchangeProxyOverhead;
-    /**
-     * Options for RFQT such as takerAddress, intent on filling
-     */
-    rfqt?: GetMarketOrdersRfqOpts;
-    /**
-     * Whether to generate a quote report
-     */
-    shouldGenerateQuoteReport: boolean;
-    /**
-     * Token addresses with a list of adjacent intermediary tokens to consider
-     * hopping to. E.g DAI->USDC via an adjacent token WETH
-     */
-    tokenAdjacencyGraph: TokenAdjacencyGraph;
-
-    /**
-     * Gas price to use for quote
-     */
-    gasPrice: BigNumber;
-
-    /**
-     * Adjusts fills individual fills based on caller supplied criteria
-     */
-    fillAdjustor: FillAdjustor;
-
-    /**
-     * Which endpoint was called
-     */
-    endpoint: 'price' | 'quote';
-}
-
-interface OptimizedMarketOrderBase<TFillData extends FillData = FillData> {
-    source: ERC20BridgeSource;
-    fillData: TFillData;
-    type: FillQuoteTransformerOrderType; // should correspond with TFillData
-    makerToken: string;
-    takerToken: string;
-    makerAmount: BigNumber; // The amount we wish to buy from this order, e.g inclusive of any previous partial fill
-    takerAmount: BigNumber; // The amount we wish to fill this for, e.g inclusive of any previous partial fill
-    fill: FillBase;
-}
-
-export interface OptimizedMarketBridgeOrder<TFillData extends FillData = FillData>
-    extends OptimizedMarketOrderBase<TFillData> {
-    type: FillQuoteTransformerOrderType.Bridge;
-}
-
-export interface OptimizedLimitOrder extends OptimizedMarketOrderBase<NativeLimitOrderFillData> {
-    type: FillQuoteTransformerOrderType.Limit;
-}
-
-export interface OptimizedRfqOrder extends OptimizedMarketOrderBase<NativeRfqOrderFillData> {
-    type: FillQuoteTransformerOrderType.Rfq;
-}
-
-export interface OptimizedOtcOrder extends OptimizedMarketOrderBase<NativeOtcOrderFillData> {
-    type: FillQuoteTransformerOrderType.Otc;
-}
-
-export type OptimizedNativeOrder = OptimizedLimitOrder | OptimizedRfqOrder | OptimizedOtcOrder;
-
-export type OptimizedOrder = OptimizedMarketBridgeOrder | OptimizedNativeOrder;
-
-export interface TwoHopOrder {
-    firstHopOrder: OptimizedOrder;
-    secondHopOrder: OptimizedOrder;
-}
-
-export interface OptimizedOrdersByType {
-    nativeOrders: readonly OptimizedNativeOrder[];
-    twoHopOrders: readonly TwoHopOrder[];
-    bridgeOrders: readonly OptimizedMarketBridgeOrder[];
-}
-
-export abstract class Orderbook {
-    public abstract getOrdersAsync(
-        makerToken: string,
-        takerToken: string,
-        pruneFn?: (o: SignedLimitOrder) => boolean,
-    ): Promise<SignedLimitOrder[]>;
-
-    public async destroyAsync(): Promise<void> {
-        return;
-    }
+export interface AltFirmQuoteResponse extends AltBaseRfqResponse {
+    model: AltQuoteModel.Firm;
+    data: {
+        '0xv4order': V4SignedRfqOrder;
+    };
+    status: 'active' | 'rejected';
 }

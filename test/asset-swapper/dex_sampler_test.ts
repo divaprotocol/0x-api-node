@@ -1,19 +1,27 @@
 import { ChainId, getContractAddressesForChainOrThrow } from '@0x/contract-addresses';
-import { constants, expect, getRandomFloat, getRandomInteger, randomAddress } from '@0x/contracts-test-utils';
+import {
+    constants,
+    expect,
+    getRandomFloat,
+    getRandomInteger,
+    randomAddress,
+    toBaseUnitAmount,
+} from '@0x/contracts-test-utils';
 import { FillQuoteTransformerOrderType, LimitOrderFields, SignatureType } from '@0x/protocol-utils';
 import { BigNumber, hexUtils, NULL_ADDRESS } from '@0x/utils';
 import * as _ from 'lodash';
-import { SignedLimitOrder, ERC20BridgeSource } from '../../src/asset-swapper/types';
 
+import { SignedOrder } from '../../src/asset-swapper/types';
 import { DexOrderSampler, getSampleAmounts } from '../../src/asset-swapper/utils/market_operation_utils/sampler';
+import { ERC20BridgeSource } from '../../src/asset-swapper/utils/market_operation_utils/types';
 import { TokenAdjacencyGraphBuilder } from '../../src/asset-swapper/utils/token_adjacency_graph';
-import { UniswapV3Sampler } from '../../src/samplers/uniswapv3_sampler';
 
 import { MockSamplerContract } from './utils/mock_sampler_contract';
 import { generatePseudoRandomSalt } from './utils/utils';
 
 const CHAIN_ID = 1;
 const EMPTY_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
+// tslint:disable: custom-no-magic-numbers
 describe('DexSampler tests', () => {
     const MAKER_TOKEN = randomAddress();
     const TAKER_TOKEN = randomAddress();
@@ -59,8 +67,8 @@ describe('DexSampler tests', () => {
         });
     });
 
-    function createOrder(overrides?: Partial<LimitOrderFields>): SignedLimitOrder {
-        const o: SignedLimitOrder = {
+    function createOrder(overrides?: Partial<LimitOrderFields>): SignedOrder<LimitOrderFields> {
+        const o: SignedOrder<LimitOrderFields> = {
             order: {
                 salt: generatePseudoRandomSalt(),
                 expiry: getRandomInteger(0, 2 ** 64),
@@ -102,6 +110,7 @@ describe('DexSampler tests', () => {
                 undefined,
                 undefined,
                 undefined,
+                undefined,
                 async () => undefined,
             );
             const [fillableAmounts] = await dexOrderSampler.executeAsync(
@@ -125,12 +134,101 @@ describe('DexSampler tests', () => {
                 undefined,
                 undefined,
                 undefined,
+                undefined,
                 async () => undefined,
             );
             const [fillableAmounts] = await dexOrderSampler.executeAsync(
                 dexOrderSampler.getLimitOrderFillableTakerAmounts(ORDERS, exchangeProxyAddress),
             );
             expect(fillableAmounts).to.deep.eq(expectedFillableAmounts);
+        });
+
+        it('getLiquidityProviderSellQuotes()', async () => {
+            const expectedMakerToken = randomAddress();
+            const expectedTakerToken = randomAddress();
+            const poolAddress = randomAddress();
+            const gasCost = 123;
+            const sampler = new MockSamplerContract({
+                sampleSellsFromLiquidityProvider: (providerAddress, takerToken, makerToken, _fillAmounts) => {
+                    expect(providerAddress).to.eq(poolAddress);
+                    expect(takerToken).to.eq(expectedTakerToken);
+                    expect(makerToken).to.eq(expectedMakerToken);
+                    return [toBaseUnitAmount(1001)];
+                },
+            });
+            const dexOrderSampler = new DexOrderSampler(
+                chainId,
+                sampler,
+                undefined,
+                undefined,
+                undefined,
+                {
+                    [poolAddress]: { tokens: [expectedMakerToken, expectedTakerToken], gasCost },
+                },
+                async () => undefined,
+            );
+            const [result] = await dexOrderSampler.executeAsync(
+                dexOrderSampler.getSellQuotes(
+                    [ERC20BridgeSource.LiquidityProvider],
+                    expectedMakerToken,
+                    expectedTakerToken,
+                    [toBaseUnitAmount(1000)],
+                ),
+            );
+            expect(result).to.deep.equal([
+                [
+                    {
+                        source: 'LiquidityProvider',
+                        output: toBaseUnitAmount(1001),
+                        input: toBaseUnitAmount(1000),
+                        fillData: { poolAddress, gasCost },
+                    },
+                ],
+            ]);
+        });
+
+        it('getLiquidityProviderBuyQuotes()', async () => {
+            const expectedMakerToken = randomAddress();
+            const expectedTakerToken = randomAddress();
+            const poolAddress = randomAddress();
+            const gasCost = 321;
+            const sampler = new MockSamplerContract({
+                sampleBuysFromLiquidityProvider: (providerAddress, takerToken, makerToken, _fillAmounts) => {
+                    expect(providerAddress).to.eq(poolAddress);
+                    expect(takerToken).to.eq(expectedTakerToken);
+                    expect(makerToken).to.eq(expectedMakerToken);
+                    return [toBaseUnitAmount(999)];
+                },
+            });
+            const dexOrderSampler = new DexOrderSampler(
+                chainId,
+                sampler,
+                undefined,
+                undefined,
+                undefined,
+                {
+                    [poolAddress]: { tokens: [expectedMakerToken, expectedTakerToken], gasCost },
+                },
+                async () => undefined,
+            );
+            const [result] = await dexOrderSampler.executeAsync(
+                dexOrderSampler.getBuyQuotes(
+                    [ERC20BridgeSource.LiquidityProvider],
+                    expectedMakerToken,
+                    expectedTakerToken,
+                    [toBaseUnitAmount(1000)],
+                ),
+            );
+            expect(result).to.deep.equal([
+                [
+                    {
+                        source: 'LiquidityProvider',
+                        output: toBaseUnitAmount(999),
+                        input: toBaseUnitAmount(1000),
+                        fillData: { poolAddress, gasCost },
+                    },
+                ],
+            ]);
         });
 
         it('getUniswapSellQuotes()', async () => {
@@ -149,6 +247,7 @@ describe('DexSampler tests', () => {
             const dexOrderSampler = new DexOrderSampler(
                 chainId,
                 sampler,
+                undefined,
                 undefined,
                 undefined,
                 undefined,
@@ -183,6 +282,7 @@ describe('DexSampler tests', () => {
                 undefined,
                 undefined,
                 undefined,
+                undefined,
                 async () => undefined,
             );
             const [fillableAmounts] = await dexOrderSampler.executeAsync(
@@ -193,75 +293,6 @@ describe('DexSampler tests', () => {
                 ),
             );
             expect(fillableAmounts).to.deep.eq(expectedMakerFillAmounts);
-        });
-
-        it('getUniswapV3SellQuotes()', async () => {
-            const expectedTakerToken = randomAddress();
-            const expectedMakerToken = randomAddress();
-            const expectedTakerFillAmounts = getSampleAmounts(new BigNumber(10e18), 10);
-            const expectedMakerFillAmounts = getSampleAmounts(new BigNumber(100e18), 10);
-            const expectedGasUsageAmounts = new Array(10).fill(new BigNumber(10e6));
-            const sampler = new MockSamplerContract({
-                sampleSellsFromUniswapV3: (_router, path, fillAmounts) => {
-                    expect(path).to.deep.eq([expectedTakerToken, expectedMakerToken]);
-                    expect(fillAmounts).to.deep.eq(expectedTakerFillAmounts);
-
-                    // NOTE: in the actual uniV3 sampler, the returned path(s) will be an array of the same length as the length of the amounts array.
-                    // Each element will be something like: [token0, token0token1PairFee, token1].
-                    // Just return path, since this is not testing the validity of the sampler result.
-                    return [path, expectedGasUsageAmounts, expectedMakerFillAmounts];
-                },
-            });
-            const dexOrderSampler = new DexOrderSampler(
-                chainId,
-                sampler,
-                undefined,
-                undefined,
-                undefined,
-                async () => undefined,
-            );
-            const uniswapV3Sampler = new UniswapV3Sampler(ChainId.Mainnet, sampler);
-
-            const [fillableAmounts] = await dexOrderSampler.executeAsync(
-                uniswapV3Sampler.createSampleSellsOperation(
-                    [expectedTakerToken, expectedMakerToken],
-                    expectedTakerFillAmounts,
-                ),
-            );
-            expect(fillableAmounts).to.deep.eq(expectedMakerFillAmounts);
-        });
-
-        it('getUniswapV3BuyQuotes()', async () => {
-            const expectedTakerToken = randomAddress();
-            const expectedMakerToken = randomAddress();
-            const expectedTakerFillAmounts = getSampleAmounts(new BigNumber(10e18), 10);
-            const expectedMakerFillAmounts = getSampleAmounts(new BigNumber(100e18), 10);
-            const expectedGasUsageAmounts = Array.from({ length: 10 }, (_, __) => new BigNumber(10e6));
-            const sampler = new MockSamplerContract({
-                sampleBuysFromUniswapV3: (_router, path, fillAmounts) => {
-                    expect(path).to.deep.eq([expectedTakerToken, expectedMakerToken]);
-                    expect(fillAmounts).to.deep.eq(expectedMakerFillAmounts);
-
-                    return [path, expectedGasUsageAmounts, expectedTakerFillAmounts];
-                },
-            });
-            const dexOrderSampler = new DexOrderSampler(
-                chainId,
-                sampler,
-                undefined,
-                undefined,
-                undefined,
-                async () => undefined,
-            );
-            const uniswapV3Sampler = new UniswapV3Sampler(ChainId.Mainnet, sampler);
-
-            const [fillableAmounts] = await dexOrderSampler.executeAsync(
-                uniswapV3Sampler.createSampleBuysOperation(
-                    [expectedTakerToken, expectedMakerToken],
-                    expectedMakerFillAmounts,
-                ),
-            );
-            expect(fillableAmounts).to.deep.eq(expectedTakerFillAmounts);
         });
 
         it('getUniswapBuyQuotes()', async () => {
@@ -280,6 +311,7 @@ describe('DexSampler tests', () => {
             const dexOrderSampler = new DexOrderSampler(
                 chainId,
                 sampler,
+                undefined,
                 undefined,
                 undefined,
                 undefined,
@@ -338,6 +370,7 @@ describe('DexSampler tests', () => {
                 undefined,
                 undefined,
                 tokenAdjacencyGraph,
+                undefined,
                 async () => undefined,
             );
             const [quotes] = await dexOrderSampler.executeAsync(
@@ -422,6 +455,7 @@ describe('DexSampler tests', () => {
                 undefined,
                 undefined,
                 tokenAdjacencyGraph,
+                undefined,
                 async () => undefined,
             );
             const [quotes] = await dexOrderSampler.executeAsync(
@@ -483,6 +517,7 @@ describe('DexSampler tests', () => {
                     undefined,
                     undefined,
                     undefined,
+                    undefined,
                     async () => undefined,
                 );
                 const [fillableMakerAmounts, fillableTakerAmounts] = await dexOrderSampler.executeAsync(
@@ -495,3 +530,4 @@ describe('DexSampler tests', () => {
         });
     });
 });
+// tslint:disable-next-line: max-file-line-count
