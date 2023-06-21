@@ -119,7 +119,8 @@ export const BALANCE_CHECKER_ADDRESS = () => {
 export const BALANCE_CHECKER_GAS_LIMIT = 10000000;
 
 // Diva Governance Address
-export const DIVA_GOVERNANCE_ADDRESS = () => { // creator of pools on Main Markets page and trading fee recipient
+export const DIVA_GOVERNANCE_ADDRESS = () => {
+    // creator of pools on Main Markets page and trading fee recipient
     if (process.env.CHAIN_ID === `1`) {
         return '0x1062CCC9F9a4bBcf565799683b6c00eA525ECb9F';
     } else if (process.env.CHAIN_ID === `5`) {
