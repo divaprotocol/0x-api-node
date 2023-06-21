@@ -9,7 +9,7 @@ export const DEFAULT_PER_PAGE = 1000;
 export const ZERO = new BigNumber(0);
 export const ONE = new BigNumber(1);
 export const MAX_TOKEN_SUPPLY_POSSIBLE = new BigNumber(2).pow(256);
-export const DEFAULT_LOCAL_POSTGRES_URI = `postgres://${process.env.DATABASE_USER_NAME}:${process.env.DATABASE_USER_PASSWORD}@54.82.65.195:5432/${process.env.DATABASE_NAME}`;
+export const DEFAULT_LOCAL_POSTGRES_URI = `postgres://${process.env.DATABASE_USER_NAME}:${process.env.DATABASE_USER_PASSWORD}@localhost:5432/${process.env.DATABASE_NAME}`;
 export const DEFAULT_LOGGER_INCLUDE_TIMESTAMP = true;
 export const ONE_SECOND_MS = 1000;
 export const ONE_MINUTE_MS = ONE_SECOND_MS * 60;
@@ -88,14 +88,50 @@ export const ONE_IN_BASE_POINTS = 10000;
 export const DEFAULT_ENABLE_SLIPPAGE_PROTECTION = true;
 
 // Exchange Proxy Address
-export const EXCHANGE_PROXY_ADDRESS = '0xf91bb752490473b8342a3e964e855b9f9a2a668e';
+export const EXCHANGE_PROXY_ADDRESS = () => {
+    if (process.env.CHAIN_ID === `1`) {
+        return '0xDef1C0ded9bec7F1a1670819833240f027b25EfF';
+    } else if (process.env.CHAIN_ID === `5`) {
+        return '0xF91bB752490473B8342a3E964E855b9f9a2A668e';
+    } else if (process.env.CHAIN_ID === `137`) {
+        return '0xDef1C0ded9bec7F1a1670819833240f027b25EfF';
+    } else if (process.env.CHAIN_ID === `80001`) {
+        return '0xF471D32cb40837bf24529FCF17418fC1a4807626';
+    } else {
+        return NULL_ADDRESS;
+    }
+};
 
 // Balance Checker Address
-export const BALANCE_CHECKER_ADDRESS = '0x6F9b7892a6272880905E90DC5AcD1F56dF222FbE';
+export const BALANCE_CHECKER_ADDRESS = () => {
+    if (process.env.CHAIN_ID === `1`) {
+        return '0x5A8f3607162FCbB44a286044ED777EEd4d131e09';
+    } else if (process.env.CHAIN_ID === `5`) {
+        return '0x9293ff9733AC7666A8251564C083191c3DA8BE19';
+    } else if (process.env.CHAIN_ID === `137`) {
+        return '0xA83ea2A711D6f3c3F53be275bB40ab60b246c677';
+    } else if (process.env.CHAIN_ID === `80001`) {
+        return '0x12d998fEC98158dD816eD6EB49CF33e31765fd32';
+    } else {
+        return NULL_ADDRESS;
+    }
+};
 export const BALANCE_CHECKER_GAS_LIMIT = 10000000;
 
 // Diva Governance Address
-export const DIVA_GOVERNANCE_ADDRESS = '0xBb0F479895915F80f6fEb5BABcb0Ad39a0D7eF4E'; // creator of pools on Main Markets page and trading fee recipient
+export const DIVA_GOVERNANCE_ADDRESS = () => { // creator of pools on Main Markets page and trading fee recipient
+    if (process.env.CHAIN_ID === `1`) {
+        return '0x1062CCC9F9a4bBcf565799683b6c00eA525ECb9F';
+    } else if (process.env.CHAIN_ID === `5`) {
+        return '0x1062CCC9F9a4bBcf565799683b6c00eA525ECb9F';
+    } else if (process.env.CHAIN_ID === `137`) {
+        return '0x1062CCC9F9a4bBcf565799683b6c00eA525ECb9F';
+    } else if (process.env.CHAIN_ID === `80001`) {
+        return '0x1062CCC9F9a4bBcf565799683b6c00eA525ECb9F';
+    } else {
+        return NULL_ADDRESS;
+    }
+};
 
 // Trading Fee
 export const TRADING_FEE = 0.01; // 1%
