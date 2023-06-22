@@ -80,7 +80,7 @@ export class OrderBookService {
 
             if (
                 order.order.taker === NULL_ADDRESS && // Ensure that orders are fillable by anyone and not reserved for a specific address
-                order.order.feeRecipient === DIVA_GOVERNANCE_ADDRESS.toLowerCase() && // Ensure that the feeRecipient is DIVA Governance address
+                order.order.feeRecipient === DIVA_GOVERNANCE_ADDRESS().toLowerCase() && // Ensure that the feeRecipient is DIVA Governance address
                 (order.order.takerTokenFeeAmount.lte(takerTokenFeeAmountExpected.minus(1)) || // calculate the toleance
                     order.order.takerTokenFeeAmount.gte(takerTokenFeeAmountExpected.plus(1)))
             ) {
@@ -355,7 +355,7 @@ export class OrderBookService {
         );
 
         // Generate the balance checker contract interface
-        const balanceCheckerContractInterface = new BalanceCheckerContract(BALANCE_CHECKER_ADDRESS, provider, {
+        const balanceCheckerContractInterface = new BalanceCheckerContract(BALANCE_CHECKER_ADDRESS(), provider, {
             gas: BALANCE_CHECKER_GAS_LIMIT,
         });
 
@@ -363,7 +363,7 @@ export class OrderBookService {
         const checkRes = await Promise.all(
             makersChunks.map(async (makersChunk: string[], index: number) => {
                 return balanceCheckerContractInterface
-                    .getMinOfBalancesOrAllowances(makersChunk, makersTokensChunks[index], EXCHANGE_PROXY_ADDRESS)
+                    .getMinOfBalancesOrAllowances(makersChunk, makersTokensChunks[index], EXCHANGE_PROXY_ADDRESS())
                     .callAsync();
             }),
         );
