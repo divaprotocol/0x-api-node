@@ -276,7 +276,7 @@ export class OrderBookService {
         makerTokens = makerTokens.concat(askMakerInfo.makerTokens);
 
         // Get minOfBalancesOrAllowances
-        let minOfBalancesOrAllowances = await this.getMinOfBalancesOrAllowancesAsync(makers, makerTokens);
+        const minOfBalancesOrAllowances = await this.getMinOfBalancesOrAllowancesAsync(makers, makerTokens);
 
         const req: OrderbookPriceRequest = {
             page,
@@ -296,8 +296,6 @@ export class OrderBookService {
             // Get fillable of bid
             const fillableOrder = this.getFillableOrder(makers, makerTokens, minOfBalancesOrAllowances, order);
 
-            minOfBalancesOrAllowances = fillableOrder.minOfBalancesOrAllowances;
-
             // Filtering the bid
             if (this.filterOrder(fillableOrder.extendedOrder, req)) {
                 resultBids.push(order);
@@ -307,8 +305,6 @@ export class OrderBookService {
         askApiOrders.map((order: SRAOrder) => {
             // Get fillable of bid
             const fillableOrder = this.getFillableOrder(makers, makerTokens, minOfBalancesOrAllowances, order);
-
-            minOfBalancesOrAllowances = fillableOrder.minOfBalancesOrAllowances;
 
             // Filtering the bid
             if (this.filterOrder(fillableOrder.extendedOrder, req)) {
@@ -423,57 +419,57 @@ export class OrderBookService {
             }),
         );
 
-        let minOfBalancesOrAllowances = await this.getMinOfBalancesOrAllowancesAsync(makers, makerTokens);
+        const minOfBalancesOrAllowances = await this.getMinOfBalancesOrAllowancesAsync(makers, makerTokens);
 
         // Get best bid and ask
         for (const pool of pools) {
             const bestBids: OrderbookPriceResponse[] = []; // best bids
             let count = 0;
+            let index = 0;
             if (pool.bids.length !== 0) {
-                while (count < pool.bids.length) {
+                while (index < pool.bids.length) {
                     // Get fillable of bid
                     const fillableOrder = this.getFillableOrder(
                         makers,
                         makerTokens,
                         minOfBalancesOrAllowances,
-                        pool.bids[count],
+                        pool.bids[index],
                     );
-
-                    minOfBalancesOrAllowances = fillableOrder.minOfBalancesOrAllowances;
 
                     // Filtering the bid
                     if (this.filterOrder(fillableOrder.extendedOrder, req)) {
-                        bestBids.push(this.getBidOrAskFormat(pool.bids[count]));
+                        count++;
+                        bestBids.push(this.getBidOrAskFormat(pool.bids[index]));
                         if (count === req.count) {
                             break;
                         }
                     }
-                    count++;
+                    index++;
                 }
             }
 
             const bestAsks: OrderbookPriceResponse[] = []; // best ask
             count = 0;
+            index = 0;
             if (pool.asks.length !== 0) {
-                while (count < pool.asks.length) {
+                while (index < pool.asks.length) {
                     // Get fillable of ask
                     const fillableOrder = this.getFillableOrder(
                         makers,
                         makerTokens,
                         minOfBalancesOrAllowances,
-                        pool.asks[count],
+                        pool.asks[index],
                     );
-
-                    minOfBalancesOrAllowances = fillableOrder.minOfBalancesOrAllowances;
 
                     // Filtering the ask
                     if (this.filterOrder(fillableOrder.extendedOrder, req)) {
-                        bestAsks.push(this.getBidOrAskFormat(pool.asks[count]));
+                        count++;
+                        bestAsks.push(this.getBidOrAskFormat(pool.asks[index]));
                         if (count === req.count) {
                             break;
                         }
                     }
-                    count++;
+                    index++;
                 }
             }
 
