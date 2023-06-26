@@ -386,11 +386,13 @@ export class OrderBookService {
             pools.push({
                 baseToken: pool.longToken.id,
                 quoteToken: pool.collateralToken.id,
+                side: 'Long',
             });
 
             pools.push({
                 baseToken: pool.shortToken.id,
                 quoteToken: pool.collateralToken.id,
+                side: 'Short',
             });
         });
 
@@ -480,6 +482,7 @@ export class OrderBookService {
                 quoteToken: getAddress(pool.quoteToken), // quoteToken of pool
                 bids: bestBids, // best bid of pool
                 asks: bestAsks, // best ask of pool
+                side: pool.side,
             });
         }
 
