@@ -1,7 +1,7 @@
 import { assert } from '@0x/assert';
 import { nativeWrappedTokenSymbol, TokenMetadatasForChains, valueByChainId } from '@0x/token-metadata';
 import { BigNumber } from '@0x/utils';
-import { AlchemyProvider, InfuraProvider } from '@ethersproject/providers';
+import { InfuraProvider } from '@ethersproject/providers';
 import * as fs from 'fs';
 import * as _ from 'lodash';
 import { linearBuckets } from 'prom-client';
@@ -241,35 +241,22 @@ export const INFURA_API_KEY = _.isEmpty(process.env.INFURA_API_KEY)
     ? ''
     : assertEnvVarType('INFURA_API_KEY', process.env.INFURA_API_KEY, EnvVarType.NonEmptyString);
 
-// Alchemy Polygon API Key
-export const ALCHEMY_POLYGON_API_KEY = _.isEmpty(process.env.ALCHEMY_POLYGON_API_KEY)
-    ? ''
-    : assertEnvVarType('ALCHEMY_POLYGON_API_KEY', process.env.ALCHEMY_POLYGON_API_KEY, EnvVarType.NonEmptyString);
-
-// Alchemy Mumbai API Key
-export const ALCHEMY_MUMBAI_API_KEY = _.isEmpty(process.env.ALCHEMY_MUMBAI_API_KEY)
-    ? ''
-    : assertEnvVarType('ALCHEMY_MUMBAI_API_KEY', process.env.ALCHEMY_MUMBAI_API_KEY, EnvVarType.NonEmptyString);
-
 // Ethereum RPC Url list
-export const ETHEREUM_RPC_URL = assertEnvVarType(
-    'ETHEREUM_RPC_URL',
+export const ETHEREUM_RPC_URL =
     CHAIN_ID === 5
         ? `https://goerli.infura.io/v3/${INFURA_API_KEY}`
         : CHAIN_ID === 137
-        ? `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_POLYGON_API_KEY}`
+        ? `https://polygon-mainnet.infura.io/v3/${INFURA_API_KEY}`
         : CHAIN_ID === 80001
-        ? `https://polygon-mumbai.g.alchemy.com/v2/${ALCHEMY_MUMBAI_API_KEY}`
-        : `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
-    EnvVarType.UrlList,
-);
+        ? `https://polygon-mumbai.infura.io/v3/${INFURA_API_KEY}`
+        : `https://mainnet.infura.io/v3/${INFURA_API_KEY}`;
 
 // Ethereum RPC Url list
 export const Web3Provider =
     CHAIN_ID === 137
-        ? new AlchemyProvider(CHAIN_ID, ALCHEMY_POLYGON_API_KEY)
+        ? new InfuraProvider(CHAIN_ID, INFURA_API_KEY)
         : CHAIN_ID === 80001
-        ? new AlchemyProvider(CHAIN_ID, ALCHEMY_MUMBAI_API_KEY)
+        ? new InfuraProvider(CHAIN_ID, INFURA_API_KEY)
         : new InfuraProvider(CHAIN_ID, INFURA_API_KEY);
 
 // Timeout in seconds to wait for an RPC request (default 5000)
